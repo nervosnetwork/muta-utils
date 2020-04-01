@@ -19,4 +19,4 @@ syn = "1.0"
 bytes = "0.5"
 rand = "0.7"
 rlp = "0.4"
-protocol = { package = "muta-protocol", version = "0.1.0-alpha.1" }
+muta-protocol = "0.1.0-alpha.1" 

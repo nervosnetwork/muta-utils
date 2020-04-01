@@ -1,6 +1,6 @@
 mod mock_types;
 
-use protocol::fixed_codec::FixedCodec;
+use muta_protocol::fixed_codec::FixedCodec;
 
 use crate::mock_types::{Hash, Hex, SignedTransaction};
 
