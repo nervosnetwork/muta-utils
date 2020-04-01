@@ -11,5 +11,3 @@ fi
 if [ "$TEST" = true ]; then
   make test
 fi
-
-git diff --exit-code Cargo.lock
