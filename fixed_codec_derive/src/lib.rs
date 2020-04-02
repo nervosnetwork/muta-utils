@@ -1,3 +1,5 @@
+//! Derive macro `#[derive(RlpFixedCodec)]`
+
 mod decode;
 mod encode;
 mod fixed_codec;

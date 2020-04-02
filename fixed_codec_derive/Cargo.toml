@@ -3,7 +3,7 @@ name = "fixed-codec-derive"
 version = "0.1.0"
 authors = ["Muta Dev <muta@nervos.org>"]
 edition = "2018"
-repository = "https://github.com/nervosnetwork/muta"
+repository = "https://github.com/nervosnetwork/muta-utils"
 license = "MIT"
 description = "Muta fixed codec derive procedural macros."
 
