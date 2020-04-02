@@ -1,7 +1,8 @@
 #![allow(clippy::new_without_default)]
 
-use bytes::Bytes;
 use fixed_codec_derive::RlpFixedCodec;
+use muta_protocol::fixed_codec::{FixedCodec, FixedCodecError};
+use muta_protocol::{Bytes, ProtocolResult};
 use rand::random;
 
 const HASH_LEN: usize = 32;

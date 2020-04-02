@@ -38,7 +38,7 @@ pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuote
 			if ident_type == "Vec" {
 				quote! { #list(#index)?, }
 			} else if ident_type == "Bytes" {
-				quote! { bytes::Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
+				quote! { Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
 			} else if ident_type == "String" {
 				let string = quote! { rlp.val_at::<String>(#index)? };
 				quote! { {
@@ -89,7 +89,7 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
 			if ident_type == "Vec" {
 				quote! { #id: #list(#index)?, }
 			} else if ident_type == "Bytes" {
-				quote! { #id: bytes::Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
+				quote! { #id: Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
 			} else {
 				quote! { #id: #single(#index)?, }
 			}

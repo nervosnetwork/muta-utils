@@ -15,12 +15,12 @@ pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
 	let impl_encode = impl_encode(&name, body);
 	let impl_decode = impl_decode(&name, body);
 	let impl_muta = quote! {
-		impl muta_protocol::fixed_codec::FixedCodec for #name {
-			fn encode_fixed(&self) -> ProtocolResult<bytes::Bytes> {
-				Ok(bytes::Bytes::from(rlp::encode(self)))
+		impl FixedCodec for #name {
+			fn encode_fixed(&self) -> ProtocolResult<Bytes> {
+				Ok(Bytes::from(rlp::encode(self)))
 			}
 
-			fn decode_fixed(bytes: bytes::Bytes) -> ProtocolResult<Self> {
+			fn decode_fixed(bytes: Bytes) -> ProtocolResult<Self> {
 				Ok(rlp::decode(bytes.as_ref()).map_err(FixedCodecError::from)?)
 			}
 		}
@@ -29,9 +29,6 @@ pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
 	quote! {
 		const _: () = {
 			extern crate rlp;
-			extern crate muta_protocol;
-
-			use muta_protocol::{fixed_codec::FixedCodecError, ProtocolResult, Bytes};
 
 			#impl_encode
 			#impl_decode
