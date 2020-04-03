@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::decode::{decode_field, decode_parse_quotes, decode_unnamed_field};
-use crate::encode::{encode_field, encode_unnamed_field};
+use crate::encode::encode_field;
 
 pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
 	let name = ast.ident;
@@ -38,21 +38,8 @@ pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
 }
 
 fn impl_encode(name: &syn::Ident, body: &syn::DataStruct) -> TokenStream {
-	let is_named = match &body.fields {
-		syn::Fields::Named(_) => true,
-		syn::Fields::Unnamed(_) => false,
-		_ => panic!("unit struct or unit variant such as None isn't supported"),
-	};
-
-	let stmts = if is_named {
-		body.fields.iter().enumerate().map(|(i, field)| encode_field(i, field)).collect::<Vec<_>>()
-	} else {
-		body.fields
-			.iter()
-			.enumerate()
-			.map(|(i, field)| encode_unnamed_field(i, field))
-			.collect::<Vec<_>>()
-	};
+	let stmts =
+		body.fields.iter().enumerate().map(|(i, field)| encode_field(i, field)).collect::<Vec<_>>();
 	let stmts_len = stmts.len();
 	let stmts_len = quote! { #stmts_len };
 

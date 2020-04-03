@@ -26,8 +26,7 @@ pub struct Hex(String);
 
 impl Hex {
 	pub fn new() -> Self {
-		let temp = "0x".to_owned() + &String::from("muta-dev");
-		Self(temp)
+		Self(String::from("muta-dev"))
 	}
 }
 

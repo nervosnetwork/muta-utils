@@ -39,13 +39,6 @@ pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuote
 				quote! { #list(#index)?, }
 			} else if ident_type == "Bytes" {
 				quote! { Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
-			} else if ident_type == "String" {
-				let string = quote! { rlp.val_at::<String>(#index)? };
-				quote! { {
-					let string: String = #string;
-					let ret = "0x".to_owned() + string.as_str();
-					ret
-				}, }
 			} else {
 				quote! { #single(#index)?, }
 			}
