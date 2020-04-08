@@ -24,18 +24,18 @@ impl Hash {
 #[derive(Clone, Debug, RlpFixedCodec, PartialEq, Eq)]
 pub struct Hex(String);
 
+impl Hex {
+	pub fn new() -> Self {
+		Self(String::from("muta-dev"))
+	}
+}
+
 #[derive(Clone, Debug, RlpFixedCodec, PartialEq, Eq)]
 pub struct TupleStructWithVec(Vec<Bytes>, String);
 
 impl TupleStructWithVec {
 	pub fn new() -> Self {
 		TupleStructWithVec(vec![random_bytes(8), random_bytes(8)], String::from("muta-dev"))
-	}
-}
-
-impl Hex {
-	pub fn new() -> Self {
-		Self(String::from("muta-dev"))
 	}
 }
 

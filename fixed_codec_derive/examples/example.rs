@@ -9,4 +9,17 @@ pub struct Foo {
 	list: Vec<Bytes>,
 }
 
-fn main() {}
+impl Foo {
+	fn new() -> Foo {
+		Foo {
+			string: String::from("muta-dev"),
+			bytes: Bytes::from(vec![0, 1, 2]),
+			list: vec![Bytes::default()],
+		}
+	}
+}
+
+fn main() {
+	let bytes = Foo::new().encode_fixed().unwrap();
+	println!("{:?}", bytes);
+}
