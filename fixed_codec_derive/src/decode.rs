@@ -36,11 +36,31 @@ pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuote
 				&path.path.segments.first().expect("there must be at least 1 segment").ident;
 			let ident_type = ident.to_string();
 			if ident_type == "Vec" {
-				quote! { #list(#index)?, }
-			} else if ident_type == "Bytes" {
-				quote! { Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
+				let field_ident = match &path
+					.path
+					.segments
+					.first()
+					.expect("there must be at least 1 segment")
+					.arguments
+				{
+					syn::PathArguments::AngleBracketed(argc) => {
+						argc.args.first().expect("there must be at least 1 argument")
+					}
+					_ => panic!("there must be at least 1 type"),
+				};
+
+				quote! { {
+					let temp: Vec<Vec<u8>> = #list(#index)?;
+					temp
+						.iter()
+						.map(|item| #field_ident::decode_fixed(Bytes::from(item.clone())).expect("decode error"))
+						.collect::<Vec<_>>()
+				}, }
 			} else {
-				quote! { #single(#index)?, }
+				quote! { {
+					let bytes: Vec<u8> = #single(#index)?;
+					#ident::decode_fixed(Bytes::from(bytes)).expect("decode error")
+				}, }
 			}
 		}
 		_ => panic!("fixed_codec_derive not supported"),
@@ -80,11 +100,31 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
 				&path.path.segments.first().expect("there must be at least 1 segment").ident;
 			let ident_type = ident.to_string();
 			if ident_type == "Vec" {
-				quote! { #id: #list(#index)?, }
-			} else if ident_type == "Bytes" {
-				quote! { #id: Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
+				let field_ident = match &path
+					.path
+					.segments
+					.first()
+					.expect("there must be at least 1 segment")
+					.arguments
+				{
+					syn::PathArguments::AngleBracketed(argc) => {
+						argc.args.first().expect("there must be at least 1 argument")
+					}
+					_ => panic!("there must be at least 1 type"),
+				};
+
+				quote! { #id: {
+					let temp: Vec<Vec<u8>> = #list(#index)?;
+					temp
+						.into_iter()
+						.map(|bytes| #field_ident::decode_fixed(Bytes::from(bytes)).expect("decode error"))
+						.collect::<Vec<_>>()
+				}, }
 			} else {
-				quote! { #id: #single(#index)?, }
+				quote! { #id: {
+					let bytes: Vec<u8> = #single(#index)?;
+					#ident::decode_fixed(Bytes::from(bytes)).expect("decode error")
+				}, }
 			}
 		}
 		_ => panic!("fixed_codec_derive not supported"),
