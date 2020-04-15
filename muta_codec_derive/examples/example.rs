@@ -1,4 +1,4 @@
-use fixed_codec_derive::RlpFixedCodec;
+use muta_codec_derive::RlpFixedCodec;
 use muta_protocol::fixed_codec::{FixedCodec, FixedCodecError};
 use muta_protocol::{Bytes, ProtocolResult};
 
