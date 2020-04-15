@@ -19,4 +19,4 @@ syn = "1.0"
 bytes = "0.5"
 rand = "0.7"
 rlp = "0.4"
-muta-protocol = { git = "https://github.com/KaoImin/muta.git", branch = "fixed_codec" } 
+muta-protocol = { git = "https://github.com/nervosnetwork/muta.git", rev = "0734799" } 
