@@ -1,6 +1,6 @@
 [package]
-name = "fixed-codec-derive"
-version = "0.1.0"
+name = "muta-codec-derive"
+version = "0.2.0"
 authors = ["Muta Dev <muta@nervos.org>"]
 edition = "2018"
 repository = "https://github.com/nervosnetwork/muta-utils"
