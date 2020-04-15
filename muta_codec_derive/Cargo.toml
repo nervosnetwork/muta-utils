@@ -1,6 +1,6 @@
 [package]
-name = "fixed-codec-derive"
-version = "0.1.0"
+name = "muta-codec-derive"
+version = "0.2.0"
 authors = ["Muta Dev <muta@nervos.org>"]
 edition = "2018"
 repository = "https://github.com/nervosnetwork/muta-utils"
@@ -19,4 +19,4 @@ syn = "1.0"
 bytes = "0.5"
 rand = "0.7"
 rlp = "0.4"
-muta-protocol = "0.1.0-alpha.1" 
+muta-protocol = { git = "https://github.com/nervosnetwork/muta.git", rev = "0734799" } 

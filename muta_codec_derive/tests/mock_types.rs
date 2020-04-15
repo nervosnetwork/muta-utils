@@ -1,6 +1,6 @@
 #![allow(clippy::new_without_default)]
 
-use fixed_codec_derive::RlpFixedCodec;
+use muta_codec_derive::RlpFixedCodec;
 use muta_protocol::fixed_codec::{FixedCodec, FixedCodecError};
 use muta_protocol::{Bytes, ProtocolResult};
 use rand::random;
@@ -26,8 +26,16 @@ pub struct Hex(String);
 
 impl Hex {
 	pub fn new() -> Self {
-		let temp = "0x".to_owned() + &String::from("muta-dev");
-		Self(temp)
+		Self(String::from("muta-dev"))
+	}
+}
+
+#[derive(Clone, Debug, RlpFixedCodec, PartialEq, Eq)]
+pub struct TupleStructWithVec(Vec<Bytes>, String);
+
+impl TupleStructWithVec {
+	pub fn new() -> Self {
+		TupleStructWithVec(vec![random_bytes(8), random_bytes(8)], String::from("muta-dev"))
 	}
 }
 
@@ -37,6 +45,8 @@ pub struct SignedTransaction {
 	tx_hash: Hash,
 	pubkey: Bytes,
 	signature: Bytes,
+	bytes_list: Vec<Bytes>,
+	hash_list: Vec<Hash>,
 }
 
 impl SignedTransaction {
@@ -46,6 +56,8 @@ impl SignedTransaction {
 			tx_hash: Hash::new(),
 			pubkey: random_bytes(32),
 			signature: random_bytes(64),
+			bytes_list: vec![random_bytes(16), random_bytes(16)],
+			hash_list: vec![Hash::new(), Hash::new()],
 		}
 	}
 }

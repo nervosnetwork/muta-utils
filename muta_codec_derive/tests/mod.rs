@@ -2,7 +2,7 @@ mod mock_types;
 
 use muta_protocol::fixed_codec::FixedCodec;
 
-use crate::mock_types::{Hash, Hex, SignedTransaction};
+use crate::mock_types::{Hash, Hex, SignedTransaction, TupleStructWithVec};
 
 macro_rules! test_fixed_codec {
     ($($type:ident),+) => (
@@ -17,6 +17,6 @@ macro_rules! test_fixed_codec {
 }
 
 #[test]
-fn test_hash() {
-	test_fixed_codec!(Hex, Hash, SignedTransaction);
+fn test_fixed_codec() {
+	test_fixed_codec!(Hex, Hash, SignedTransaction, TupleStructWithVec);
 }
