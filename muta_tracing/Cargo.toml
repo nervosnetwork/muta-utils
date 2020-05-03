@@ -1,0 +1,20 @@
+[package]
+name = "muta_tracing"
+version = "0.1.0"
+authors = ["Muta Dev <muta@nervos.org>"]
+edition = "2018"
+license = "MIT"
+description = "Muta tracing procedural macros."
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", features = ["full"] }
+
+[dev-dependencies]
+creep = "0.2"
+skywalking-core = { git = "https://github.com/apache/skywalking-rust.git" }
+tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
