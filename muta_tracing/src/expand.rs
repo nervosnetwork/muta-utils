@@ -25,35 +25,45 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 	} else {
 		func_name.to_string()
 	};
-	let _trace_log = if let Some(log) = tracing_attrs.tracing_log.clone() {
-		quote! { Some(#log)}
+	let trace_child_of = if let Some(parent) = tracing_attrs.tracing_child_of.clone() {
+		quote! { Some(#parent) }
 	} else {
 		quote! { None }
 	};
 	let trace_tag = tracing_attrs.get_tracing_tag();
+	let _has_child = tracing_attrs.get_has_child();
 
 	let res = quote! {
 		#func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output {
-			use skywalking_core::skywalking::core as skywalkingcore;
-			use skywalking_core::skywalking::agent as skywalkingagent;
-			use skywalking_core::skywalking::core::{Context, ContextListener};
+			use crossbeam_channel::Sender;
+			use rustracing::sampler::AllSampler;
+			use rustracing::tag::Tag;
+			use rustracing::span::FinishedSpan;
+			use rustracing_jaeger::Tracer;
+			use rustracing_jaeger::span::SpanContextState;
 
-			let service_instance_id = *ctx.get::<i32>("trace_id").unwrap();
-			let repoter = ctx.get::<SkyWalkingReporter>("trace_reporter").unwrap().clone();
-			let mut tracing_context = skywalkingcore::TracingContext::new(Some(service_instance_id)).unwrap();
-			let mut span = tracing_context.create_entry_span(#trace_name, None, None);
+			let repoter_tx = ctx.get::<Sender<FinishedSpan<SpanContextState>>>("trace_reporter_tx").unwrap().clone();
+			let mut tracer = Tracer::with_sender(AllSampler, repoter_tx);
+			let mut span = tracer.span(#trace_name);
+
+			let _trace_child_of: Option<&str> = #trace_child_of;
+			// if let Some(parent_name) = trace_child_of {
+			// 	let parent_ctx = ctx.get::<SpanContext<Tracing>>(parent_name).unwrap().clone();
+			// 	span = span.child_of::<SpanContext<T>>(&parent_ctx.into());
+			// }
 
 			let trace_tag: Option<(&str, &str)> = #trace_tag;
 			if let Some(tag) = trace_tag {
-				span.tag(skywalkingcore::Tag::new(String::from(tag.0), String::from(tag.1)));
+				span = span.tag(Tag::new(tag.0, tag.1));
 			}
 
-			let func_ret = #func_block;
+			let span = span.start();
 
-			tracing_context.finish_span(span);
-			repoter.report_trace(std::boxed::Box::new(tracing_context));
+			// if #has_child && span.context().is_some() {
+			// 	let _ = ctx.with_value(#trace_name, span.context().unwrap().clone());
+			// }
 
-			func_ret
+			#func_block
 		}
 	};
 	res.into()

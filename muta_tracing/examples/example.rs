@@ -1,36 +1,7 @@
-use std::boxed::Box;
-use std::sync::Arc;
-
 use creep::Context;
 use muta_tracing::tracing_span;
-use skywalking_core::skywalking::agent::reporter::Reporter;
-use skywalking_core::skywalking::core::{ContextListener, TracingContext};
 
 const N: u64 = 41;
-
-#[derive(Clone)]
-pub struct SkyWalkingReporter {
-	inner: Arc<Reporter>,
-}
-
-impl std::fmt::Debug for SkyWalkingReporter {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-		f.write_fmt(format_args!(
-			"SkyWalkingReporter ID {:?}",
-			self.inner.as_ref().service_instance_id()
-		))
-	}
-}
-
-impl SkyWalkingReporter {
-	pub fn new() -> Self {
-		SkyWalkingReporter { inner: Arc::new(Reporter::new()) }
-	}
-
-	pub fn report_trace(&self, finish_ctx: Box<TracingContext>) {
-		self.inner.report_trace(finish_ctx);
-	}
-}
 
 #[tokio::main]
 async fn main() {
@@ -52,8 +23,6 @@ async fn main() {
 
 fn init_ctx() -> Context {
 	Context::new()
-		.with_value("trace_id", 0i32)
-		.with_value("trace_reporter", SkyWalkingReporter::new())
 }
 
 #[tracing_span(trace_name = "power_mod")]
@@ -71,7 +40,7 @@ pub async fn power_mod(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
 	res
 }
 
-#[tracing_span]
+#[tracing_span(has_child)]
 async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
 	for a in aa.into_iter() {
 		let mut x = power_mod(ctx.clone(), a, m, N).await;

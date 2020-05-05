@@ -16,5 +16,7 @@ syn = { version = "1.0", features = ["full"] }
 
 [dev-dependencies]
 creep = "0.2"
-skywalking-core = { git = "https://github.com/apache/skywalking-rust.git" }
+crossbeam-channel = "0.4"
+rustracing = "0.4"
+rustracing_jaeger = "0.4"
 tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
