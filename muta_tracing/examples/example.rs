@@ -1,5 +1,7 @@
 use creep::Context;
 use muta_tracing::tracing_span;
+use rustracing::span::FinishedSpan;
+use rustracing_jaeger::span::SpanContextState;
 
 const N: u64 = 41;
 
@@ -22,7 +24,8 @@ async fn main() {
 }
 
 fn init_ctx() -> Context {
-	Context::new()
+	let (span_tx, _span_rx) = crossbeam_channel::bounded::<FinishedSpan<SpanContextState>>(10);
+	Context::new().with_value("trace_reporter_tx", span_tx)
 }
 
 #[tracing_span(trace_name = "power_mod")]
