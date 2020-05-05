@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, ItemFn};
+use syn::{parse_macro_input, parse_str, AttributeArgs, Expr, ItemFn};
 
 use crate::attr_parse::parse_attrs;
 
@@ -30,7 +30,24 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 	} else {
 		quote! { None }
 	};
-	let trace_tag = tracing_attrs.get_tracing_tag();
+
+	let has_tag = tracing_attrs.tracing_tag_key.is_some();
+	let tag_key = if let Some(trace_tag_key) = tracing_attrs.tracing_tag_key.clone() {
+		quote! { #trace_tag_key }
+	} else {
+		quote! { "null" }
+	};
+
+	let tag_value = if let Some(trace_tag_value) = tracing_attrs.tracing_tag_value.clone() {
+		if let Ok(expr) = parse_str::<Expr>(&trace_tag_value) {
+			quote! { (#expr).to_string() }
+		} else {
+			quote! { #trace_tag_value }
+		}
+	} else {
+		quote! { "null" }
+	};
+
 	let _has_child = tracing_attrs.get_has_child();
 
 	let res = quote! {
@@ -52,9 +69,8 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 			// 	span = span.child_of::<SpanContext<T>>(&parent_ctx.into());
 			// }
 
-			let trace_tag: Option<(&str, &str)> = #trace_tag;
-			if let Some(tag) = trace_tag {
-				span = span.tag(Tag::new(tag.0, tag.1));
+			if #has_tag {
+				span = span.tag(Tag::new(#tag_key, #tag_value));
 			}
 
 			let span = span.start();

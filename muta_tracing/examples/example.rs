@@ -59,7 +59,7 @@ async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
 	true
 }
 
-#[tracing_span(trace_tag_key = "a", trace_tag_value = "b")]
+#[tracing_span(trace_tag_key = "a", trace_tag_value = "b + 3")]
 fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
 	let mut res = 0u64;
 	a %= m;

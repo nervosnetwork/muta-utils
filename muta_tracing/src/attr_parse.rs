@@ -4,11 +4,11 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Lit, Meta, NestedMeta};
 
-static TRACING_NAME: &'static str = "trace_name";
-static TRACING_CHILD_OF: &'static str = "trace_child_of";
-static TRACING_TAG_KEY: &'static str = "trace_tag_key";
-static TRACING_TAG_VALUE: &'static str = "trace_tag_value";
-static TRACING_HAS_CHILD: &'static str = "has_child";
+static TRACING_NAME: &str = "trace_name";
+static TRACING_CHILD_OF: &str = "trace_child_of";
+static TRACING_TAG_KEY: &str = "trace_tag_key";
+static TRACING_TAG_VALUE: &str = "trace_tag_value";
+static TRACING_HAS_CHILD: &str = "has_child";
 
 pub struct TracingAttrs {
 	pub tracing_name: Option<String>,
@@ -33,16 +33,6 @@ impl Default for TracingAttrs {
 impl TracingAttrs {
 	pub fn get_tracing_name(&self) -> Option<String> {
 		self.tracing_name.clone()
-	}
-
-	pub fn get_tracing_tag(&self) -> TokenStream {
-		if self.tracing_tag_key.is_some() {
-			let tag_key = self.tracing_tag_key.clone().unwrap();
-			let tag_value = self.tracing_tag_value.clone().unwrap();
-			quote! { Some((#tag_key, #tag_value)) }
-		} else {
-			quote! { None }
-		}
 	}
 
 	pub fn get_has_child(&self) -> TokenStream {
