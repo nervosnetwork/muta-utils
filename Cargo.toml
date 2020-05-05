@@ -1,5 +1,6 @@
 [workspace]
 members = [
-    "muta_codec_derive",
-    "muta_tracing"
+    "muta_apm",
+    "muta_apm_derive",
+    "muta_codec_derive"
 ]

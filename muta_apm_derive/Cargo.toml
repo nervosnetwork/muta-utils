@@ -1,5 +1,5 @@
 [package]
-name = "muta_tracing"
+name = "muta_apm_derive"
 version = "0.1.0"
 authors = ["Muta Dev <muta@nervos.org>"]
 edition = "2018"

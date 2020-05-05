@@ -1,5 +1,5 @@
 use creep::Context;
-use muta_tracing::tracing_span;
+use muta_apm_derive::tracing_span;
 use rustracing::span::FinishedSpan;
 use rustracing_jaeger::span::SpanContextState;
 

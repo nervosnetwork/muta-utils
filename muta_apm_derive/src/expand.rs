@@ -48,8 +48,6 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 		quote! { "null" }
 	};
 
-	let _has_child = tracing_attrs.get_has_child();
-
 	let res = quote! {
 		#func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output {
 			use crossbeam_channel::Sender;
@@ -57,17 +55,19 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 			use rustracing::tag::Tag;
 			use rustracing::span::FinishedSpan;
 			use rustracing_jaeger::Tracer;
-			use rustracing_jaeger::span::SpanContextState;
+			use rustracing_jaeger::span::{SpanContextState, SpanContext};
 
 			let repoter_tx = ctx.get::<Sender<FinishedSpan<SpanContextState>>>("trace_reporter_tx").unwrap().clone();
 			let mut tracer = Tracer::with_sender(AllSampler, repoter_tx);
 			let mut span = tracer.span(#trace_name);
 
-			let _trace_child_of: Option<&str> = #trace_child_of;
-			// if let Some(parent_name) = trace_child_of {
-			// 	let parent_ctx = ctx.get::<SpanContext<Tracing>>(parent_name).unwrap().clone();
-			// 	span = span.child_of::<SpanContext<T>>(&parent_ctx.into());
-			// }
+			let trace_child_of: Option<&str> = #trace_child_of;
+			if let Some(parent_name) = trace_child_of {
+				let parent_ctx = ctx.get::<Option<&SpanContext>>(parent_name).unwrap().clone();
+				if parent_ctx.is_some() {
+					span = span.child_of::<SpanContext>(parent_ctx.unwrap());
+				}
+			}
 
 			if #has_tag {
 				span = span.tag(Tag::new(#tag_key, #tag_value));
