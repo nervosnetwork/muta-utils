@@ -11,5 +11,5 @@ use crate::expand::func_expand;
 
 #[proc_macro_attribute]
 pub fn tracing_span(attr: TokenStream, func: TokenStream) -> TokenStream {
-	func_expand(attr, func)
+    func_expand(attr, func)
 }
