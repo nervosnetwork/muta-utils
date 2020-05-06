@@ -1,12 +1,10 @@
+use std::net::{IpAddr, SocketAddr, Ipv4Addr};
+
 use creep::Context;
-use muta_apm::MutaTracer;
+use muta_apm::MUTA_TRACER;
 use muta_apm_derive::tracing_span;
 
 const N: u64 = 41;
-
-lazy_static::lazy_static! {
-    static ref MUTA_TRACER: MutaTracer = MutaTracer::new();
-}
 
 #[tokio::main]
 async fn main() {
@@ -27,6 +25,10 @@ async fn main() {
 }
 
 fn init_ctx() -> Context {
+    MUTA_TRACER.register(
+        "rabin_miller".to_string(),
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6831),
+    );
     Context::new()
 }
 

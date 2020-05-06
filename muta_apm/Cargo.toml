@@ -10,5 +10,7 @@ description = "Muta application performance monitor."
 
 [dependencies]
 crossbeam-channel = "0.4"
+lazy_static = "1.4"
+parking_lot = "0.10"
 rustracing = "0.4"
 rustracing_jaeger = "0.4"
