@@ -1,10 +1,27 @@
 use std::net::{IpAddr, SocketAddr, Ipv4Addr};
+use std::error::Error;
 
+use async_trait::async_trait;
+use bytes::Bytes;
 use creep::Context;
-use muta_apm::MUTA_TRACER;
 use muta_apm_derive::tracing_span;
 
 const N: u64 = 41;
+
+struct Consensus {}
+
+
+#[async_trait]
+impl overlord::Wal for Consensus {
+    async fn save(&self, _info: Bytes) -> Result<(), Box<dyn Error + Send>> {
+        Ok(())
+    }
+
+    #[tracing_span]
+    async fn load(&self) -> Result<Bytes, Box<dyn Error + Send>> {
+        Ok(Bytes::new())
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +42,7 @@ async fn main() {
 }
 
 fn init_ctx() -> Context {
-    MUTA_TRACER.register(
+    muta_apm::MUTA_TRACER.register(
         "rabin_miller".to_string(),
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6831),
     );

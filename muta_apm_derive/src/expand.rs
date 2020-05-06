@@ -10,7 +10,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func_block = &func.block;
     let func_decl = &func.sig;
     let func_name = &func_decl.ident;
-    let func_generics = &func_decl.generics;
+	let (func_generics, _ty, where_clause) = &func_decl.generics.split_for_impl();
     let func_inputs = &func_decl.inputs;
     let func_output = &func_decl.output;
     let func_async = if func_decl.asyncness.is_some() {
@@ -44,17 +44,17 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     };
 
     let res = quote! {
-        #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output {
+        #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
             use rustracing_jaeger::span::SpanContext;
 
             let span = if let Some(parent_ctx) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
                 if parent_ctx.is_some() {
-                    MUTA_TRACER.child_of_span(#trace_name, parent_ctx.clone().unwrap())
+                    muta_apm::MUTA_TRACER.child_of_span(#trace_name, parent_ctx.clone().unwrap())
                 } else {
-                    MUTA_TRACER.span(#trace_name)
+                    muta_apm::MUTA_TRACER.span(#trace_name)
                 }
             } else {
-                MUTA_TRACER.span(#trace_name)
+                muta_apm::MUTA_TRACER.span(#trace_name)
             };
 
             // if #has_tag {
