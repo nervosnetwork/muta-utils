@@ -47,17 +47,17 @@ impl MutaTracer {
         &self,
         opt_name: N,
         parent_ctx: SpanContext,
-    ) -> Span {
-        self.inner
-            .read()
-            .as_ref()
-            .unwrap()
-            .span(opt_name)
-            .child_of(&parent_ctx)
-            .start()
+    ) -> Option<Span> {
+        match self.inner.read().as_ref() {
+            Some(inner) => Some(inner.span(opt_name).child_of(&parent_ctx).start()),
+            None => None,
+        }
     }
 
-    pub fn span<N: Into<Cow<'static, str>>>(&self, opt_name: N) -> Span {
-        self.inner.read().as_ref().unwrap().span(opt_name).start()
+    pub fn span<N: Into<Cow<'static, str>>>(&self, opt_name: N) -> Option<Span> {
+        match self.inner.read().as_ref() {
+            Some(inner) => Some(inner.span(opt_name).start()),
+            None => None,
+        }
     }
 }

@@ -57,10 +57,13 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                 muta_apm::MUTA_TRACER.span(#trace_name)
             };
 
+            let ctx = match span {
+                Some(span) => ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone())),
+                None => ctx,
+            };
             // if #has_tag {
             //     span = span.tag(Tag::new(#tag_key, #tag_value));
             // }
-            let ctx = ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone()));
 
             #func_block
         }
