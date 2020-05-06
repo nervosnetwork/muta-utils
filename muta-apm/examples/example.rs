@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use async_trait::async_trait;
@@ -7,7 +6,27 @@ use creep::Context;
 
 const N: u64 = 41;
 
+#[async_trait]
+trait MockConsensus {
+    async fn get_block(&self, ctx: Context, height: u64) -> Bytes;
+    async fn commit(&self, ctx: Context, info: Bytes);
+}
+
 struct Consensus {}
+
+
+#[async_trait]
+impl MockConsensus for Consensus {
+    #[tracing_span]
+    async fn get_block(&self, ctx: Context, _height: u64) -> Bytes {
+        Bytes::new()
+    }
+
+    #[tracing_span]
+    async fn commit(&self, ctx: Context, info: Bytes) {
+        let _ = info.as_ref().to_vec();
+    }
+}
 
 #[tokio::main]
 async fn main() {
