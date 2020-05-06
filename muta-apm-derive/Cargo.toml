@@ -1,5 +1,5 @@
 [package]
-name = "muta_apm_derive"
+name = "muta-apm-derive"
 version = "0.1.0"
 authors = ["Muta Dev <muta@nervos.org>"]
 edition = "2018"
@@ -20,7 +20,7 @@ bytes = "0.5"
 creep = "0.2"
 crossbeam-channel = "0.4"
 lazy_static = "1.4"
-muta_apm = { path = "../muta_apm" }
+muta-apm = { path = "../muta-apm" }
 overlord = "0.2.0-alpha.11"
 rustracing = "0.4"
 rustracing_jaeger = "0.4"

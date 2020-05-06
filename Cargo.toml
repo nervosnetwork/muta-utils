@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "muta_apm",
-    "muta_apm_derive",
-    "muta_codec_derive"
+    "muta-apm",
+    "muta-apm-derive",
+    "muta-codec-derive"
 ]
