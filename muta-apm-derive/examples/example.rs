@@ -10,18 +10,6 @@ const N: u64 = 41;
 
 struct Consensus {}
 
-#[async_trait]
-impl overlord::Wal for Consensus {
-    async fn save(&self, _info: Bytes) -> Result<(), Box<dyn Error + Send>> {
-        Ok(())
-    }
-
-    #[tracing_span]
-    async fn load(&self) -> Result<Bytes, Box<dyn Error + Send>> {
-        Ok(Bytes::new())
-    }
-}
-
 #[tokio::main]
 async fn main() {
     let ctx = init_ctx();
@@ -41,8 +29,8 @@ async fn main() {
 }
 
 fn init_ctx() -> Context {
-    muta_apm::MUTA_TRACER.register(
-        "rabin_miller".to_string(),
+    muta_apm::global_tracer_register(
+        "rabin_miller",
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6831),
     );
     Context::new()
