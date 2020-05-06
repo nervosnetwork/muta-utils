@@ -23,7 +23,7 @@ impl MutaTracer {
 
             loop {
                 if let Ok(finished_span) = span_rx.try_recv() {
-                    reporter.report(&vec![finished_span]).unwrap();
+                    reporter.report(&[finished_span]).unwrap();
                 }
             }
         });
