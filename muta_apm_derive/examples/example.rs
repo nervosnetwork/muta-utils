@@ -1,8 +1,6 @@
 use creep::Context;
 use muta_apm::MutaTracer;
 use muta_apm_derive::tracing_span;
-use rustracing::span::FinishedSpan;
-use rustracing_jaeger::span::SpanContextState;
 
 const N: u64 = 41;
 
@@ -29,8 +27,7 @@ async fn main() {
 }
 
 fn init_ctx() -> Context {
-    let (span_tx, _span_rx) = crossbeam_channel::bounded::<FinishedSpan<SpanContextState>>(10);
-    Context::new().with_value("trace_reporter_tx", span_tx)
+    Context::new()
 }
 
 #[tracing_span(trace_name = "power_mod")]
@@ -45,7 +42,6 @@ pub async fn power_mod(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
         b >>= 1;
         a = multi(ctx.clone(), a, a, m);
     }
-    println!("{:?}", ctx);
     res
 }
 
@@ -65,7 +61,6 @@ async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
             return false;
         }
     }
-    println!("{:?}", ctx);
     true
 }
 
