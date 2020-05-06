@@ -1,0 +1,16 @@
+[package]
+name = "muta_apm"
+version = "0.1.0"
+authors = ["Muta Dev <muta@nervos.org>"]
+edition = "2018"
+license = "MIT"
+description = "Muta application performance monitor."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crossbeam-channel = "0.4"
+lazy_static = "1.4"
+parking_lot = "0.10"
+rustracing = "0.4"
+rustracing_jaeger = "0.4"

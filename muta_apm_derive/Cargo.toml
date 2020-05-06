@@ -1,0 +1,27 @@
+[package]
+name = "muta_apm_derive"
+version = "0.1.0"
+authors = ["Muta Dev <muta@nervos.org>"]
+edition = "2018"
+license = "MIT"
+description = "Muta tracing procedural macros."
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", features = ["full"] }
+
+[dev-dependencies]
+async-trait = "0.1"
+bytes = "0.5"
+creep = "0.2"
+crossbeam-channel = "0.4"
+lazy_static = "1.4"
+muta_apm = { path = "../muta_apm" }
+overlord = "0.2.0-alpha.11"
+rustracing = "0.4"
+rustracing_jaeger = "0.4"
+tokio = { version = "0.2", features = ["macros", "rt-threaded"] }

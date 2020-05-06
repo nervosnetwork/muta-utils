@@ -4,22 +4,22 @@ use muta_protocol::{Bytes, ProtocolResult};
 
 #[derive(Clone, Debug, RlpFixedCodec)]
 pub struct Foo {
-	string: String,
-	bytes: Bytes,
-	list: Vec<Bytes>,
+    string: String,
+    bytes:  Bytes,
+    list:   Vec<Bytes>,
 }
 
 impl Foo {
-	fn new() -> Foo {
-		Foo {
-			string: String::from("muta-dev"),
-			bytes: Bytes::from(vec![0, 1, 2]),
-			list: vec![Bytes::default()],
-		}
-	}
+    fn new() -> Foo {
+        Foo {
+            string: String::from("muta-dev"),
+            bytes:  Bytes::from(vec![0, 1, 2]),
+            list:   vec![Bytes::default()],
+        }
+    }
 }
 
 fn main() {
-	let bytes = Foo::new().encode_fixed().unwrap();
-	println!("{:?}", bytes);
+    let bytes = Foo::new().encode_fixed().unwrap();
+    println!("{:?}", bytes);
 }

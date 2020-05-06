@@ -18,5 +18,5 @@ macro_rules! test_fixed_codec {
 
 #[test]
 fn test_fixed_codec() {
-	test_fixed_codec!(Hex, Hash, SignedTransaction, TupleStructWithVec);
+    test_fixed_codec!(Hex, Hash, SignedTransaction, TupleStructWithVec);
 }
