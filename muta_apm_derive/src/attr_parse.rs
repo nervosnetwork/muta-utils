@@ -3,13 +3,11 @@ use std::ops::BitXor;
 use syn::{Lit, Meta, NestedMeta};
 
 static TRACING_NAME: &str = "trace_name";
-static TRACING_CHILD_OF: &str = "trace_child_of";
 static TRACING_TAG_KEY: &str = "trace_tag_key";
 static TRACING_TAG_VALUE: &str = "trace_tag_value";
 
 pub struct TracingAttrs {
     pub tracing_name:      Option<String>,
-    pub tracing_child_of:  Option<String>,
     pub tracing_tag_key:   Option<String>,
     pub tracing_tag_value: Option<String>,
 }
@@ -18,7 +16,6 @@ impl Default for TracingAttrs {
     fn default() -> Self {
         TracingAttrs {
             tracing_name:      None,
-            tracing_child_of:  None,
             tracing_tag_key:   None,
             tracing_tag_value: None,
         }
@@ -32,10 +29,6 @@ impl TracingAttrs {
 
     fn set_tracing_name(&mut self, name: String) {
         self.tracing_name = Some(name);
-    }
-
-    fn set_tracing_child_of(&mut self, child_of: String) {
-        self.tracing_child_of = Some(child_of);
     }
 
     fn set_tracing_tag_key(&mut self, tag_key: String) {
@@ -76,8 +69,6 @@ fn match_attr(tracing_attrs: &mut TracingAttrs, input: &NestedMeta) {
 
                 if ident == TRACING_NAME {
                     tracing_attrs.set_tracing_name(get_lit_str(&name_value.lit));
-                } else if ident == TRACING_CHILD_OF {
-                    tracing_attrs.set_tracing_child_of(get_lit_str(&name_value.lit));
                 } else if ident == TRACING_TAG_KEY {
                     tracing_attrs.set_tracing_tag_key(get_lit_str(&name_value.lit));
                 } else if ident == TRACING_TAG_VALUE {

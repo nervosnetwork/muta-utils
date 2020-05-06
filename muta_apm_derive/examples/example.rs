@@ -1,9 +1,14 @@
 use creep::Context;
+use muta_apm::MutaTracer;
 use muta_apm_derive::tracing_span;
 use rustracing::span::FinishedSpan;
 use rustracing_jaeger::span::SpanContextState;
 
 const N: u64 = 41;
+
+lazy_static::lazy_static! {
+    static ref MUTA_TRACER: MutaTracer = MutaTracer::new();
+}
 
 #[tokio::main]
 async fn main() {
@@ -40,6 +45,7 @@ pub async fn power_mod(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
         b >>= 1;
         a = multi(ctx.clone(), a, a, m);
     }
+    println!("{:?}", ctx);
     res
 }
 
@@ -59,6 +65,7 @@ async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
             return false;
         }
     }
+    println!("{:?}", ctx);
     true
 }
 

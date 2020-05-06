@@ -25,11 +25,6 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     } else {
         func_name.to_string()
     };
-    let trace_child_of = if let Some(parent) = tracing_attrs.tracing_child_of.clone() {
-        quote! { Some(#parent) }
-    } else {
-        quote! { None }
-    };
 
     let has_tag = tracing_attrs.tracing_tag_key.is_some();
     let tag_key = if let Some(trace_tag_key) = tracing_attrs.tracing_tag_key.clone() {
@@ -50,22 +45,14 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let res = quote! {
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output {
-            use crossbeam_channel::Sender;
-            use rustracing::sampler::AllSampler;
             use rustracing::tag::Tag;
-            use rustracing::span::FinishedSpan;
-            use rustracing_jaeger::Tracer;
-            use rustracing_jaeger::span::{SpanContextState, SpanContext};
+            use rustracing_jaeger::span::SpanContext;
 
-            let repoter_tx = ctx.get::<Sender<FinishedSpan<SpanContextState>>>("trace_reporter_tx").unwrap().clone();
-            let mut tracer = Tracer::with_sender(AllSampler, repoter_tx);
-            let mut span = tracer.span(#trace_name);
+            let mut span = MUTA_TRACER.span(#trace_name);
 
-            let trace_child_of: Option<&str> = #trace_child_of;
-            if let Some(parent_name) = trace_child_of {
-                let parent_ctx = ctx.get::<Option<&SpanContext>>(parent_name).unwrap().clone();
+            if let Some(parent_ctx) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
                 if parent_ctx.is_some() {
-                    span = span.child_of::<SpanContext>(parent_ctx.unwrap());
+                    span = span.child_of::<SpanContext>(&parent_ctx.clone().unwrap());
                 }
             }
 
@@ -74,10 +61,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
             }
 
             let span = span.start();
-
-            // if #has_child && span.context().is_some() {
-            // 	let _ = ctx.with_value(#trace_name, span.context().unwrap().clone());
-            // }
+            let ctx = ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone()));
 
             #func_block
         }
