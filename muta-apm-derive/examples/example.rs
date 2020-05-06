@@ -1,5 +1,5 @@
-use std::net::{IpAddr, SocketAddr, Ipv4Addr};
 use std::error::Error;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -9,7 +9,6 @@ use muta_apm_derive::tracing_span;
 const N: u64 = 41;
 
 struct Consensus {}
-
 
 #[async_trait]
 impl overlord::Wal for Consensus {

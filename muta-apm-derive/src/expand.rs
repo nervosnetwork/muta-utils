@@ -10,7 +10,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func_block = &func.block;
     let func_decl = &func.sig;
     let func_name = &func_decl.ident;
-	let (func_generics, _ty, where_clause) = &func_decl.generics.split_for_impl();
+    let (func_generics, _ty, where_clause) = &func_decl.generics.split_for_impl();
     let func_inputs = &func_decl.inputs;
     let func_output = &func_decl.output;
     let func_async = if func_decl.asyncness.is_some() {
