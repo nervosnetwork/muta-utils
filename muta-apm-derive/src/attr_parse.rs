@@ -1,23 +1,28 @@
-use std::ops::BitXor;
+use std::collections::HashMap;
 
-use syn::{Lit, Meta, NestedMeta};
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{parse_str, Expr, Lit, Meta, NestedMeta};
 
-static TRACING_NAME: &str = "trace_name";
-static TRACING_TAG_KEY: &str = "trace_tag_key";
-static TRACING_TAG_VALUE: &str = "trace_tag_value";
+static KIND: &str = "kind";
+static TRACING_NAME: &str = "name";
+static TRACING_TAGS: &str = "tags";
+static TRACING_LOGS: &str = "logs";
 
 pub struct TracingAttrs {
-    pub tracing_name:      Option<String>,
-    pub tracing_tag_key:   Option<String>,
-    pub tracing_tag_value: Option<String>,
+    pub kind:         String,
+    pub tracing_name: Option<String>,
+    pub tracing_tags: HashMap<String, String>,
+    pub tracing_logs: HashMap<String, String>,
 }
 
 impl Default for TracingAttrs {
     fn default() -> Self {
         TracingAttrs {
-            tracing_name:      None,
-            tracing_tag_key:   None,
-            tracing_tag_value: None,
+            kind:         String::new(),
+            tracing_name: None,
+            tracing_tags: HashMap::new(),
+            tracing_logs: HashMap::new(),
         }
     }
 }
@@ -27,16 +32,30 @@ impl TracingAttrs {
         self.tracing_name.clone()
     }
 
+    pub fn get_tag_map(&self) -> HashMap<String, String> {
+        let mut res = self.tracing_tags.clone();
+        res.insert("kind = ".to_string(), self.kind.clone());
+        res
+    }
+
+    pub fn get_log_map(&self) -> HashMap<String, String> {
+        self.tracing_logs.clone()
+    }
+
+    fn set_kind(&mut self, kind: String) {
+        self.kind = kind;
+    }
+
     fn set_tracing_name(&mut self, name: String) {
         self.tracing_name = Some(name);
     }
 
-    fn set_tracing_tag_key(&mut self, tag_key: String) {
-        self.tracing_tag_key = Some(tag_key);
+    fn set_tracing_tags(&mut self, tags: HashMap<String, String>) {
+        self.tracing_tags = tags;
     }
 
-    fn set_tracing_tag_value(&mut self, tag_value: String) {
-        self.tracing_tag_value = Some(tag_value);
+    fn set_tracing_logs(&mut self, logs: HashMap<String, String>) {
+        self.tracing_logs = logs;
     }
 }
 
@@ -46,14 +65,19 @@ pub fn parse_attrs(input: Vec<NestedMeta>) -> TracingAttrs {
         match_attr(&mut attrs, attr);
     }
 
-    if attrs
-        .tracing_tag_key
-        .is_some()
-        .bitxor(attrs.tracing_tag_value.is_some())
-    {
-        panic!("Missing one of tag key or value");
-    }
     attrs
+}
+
+pub fn span_log(key: String, val: String) -> TokenStream {
+    if let Ok(expr) = parse_str::<Expr>(&val) {
+        quote! { span_logs.push(LogField::new(#key, (#expr).to_string())); }
+    } else {
+        quote! { span_logs.push(LogField::new(#key, #val)); }
+    }
+}
+
+pub fn span_tag(key: String, val: String) -> TokenStream {
+    quote! { span_tags.push(Tag::new(#key, #val)); }
 }
 
 fn match_attr(tracing_attrs: &mut TracingAttrs, input: &NestedMeta) {
@@ -67,25 +91,60 @@ fn match_attr(tracing_attrs: &mut TracingAttrs, input: &NestedMeta) {
                     .expect("there must be at least 1 segment")
                     .ident;
 
-                if ident == TRACING_NAME {
+                if ident == KIND {
+                    tracing_attrs.set_kind(get_lit_str(&name_value.lit));
+                } else if ident == TRACING_NAME {
                     tracing_attrs.set_tracing_name(get_lit_str(&name_value.lit));
-                } else if ident == TRACING_TAG_KEY {
-                    tracing_attrs.set_tracing_tag_key(get_lit_str(&name_value.lit));
-                } else if ident == TRACING_TAG_VALUE {
-                    tracing_attrs.set_tracing_tag_value(get_lit_str(&name_value.lit));
+                } else if ident == TRACING_TAGS {
+                    tracing_attrs.set_tracing_tags(parse_json(&get_lit_str(&name_value.lit)));
+                } else if ident == TRACING_LOGS {
+                    tracing_attrs.set_tracing_logs(parse_json(&get_lit_str(&name_value.lit)));
                 } else {
                     panic!("");
                 }
             }
-            _ => unreachable!(),
+            _ => unreachable!("name_value"),
         },
-        _ => unreachable!(),
+        _ => unreachable!("meta"),
     };
 }
 
 fn get_lit_str(lit: &Lit) -> String {
     match lit {
         Lit::Str(value) => value.value(),
-        _ => unreachable!(),
+        _ => unreachable!("lit_str"),
+    }
+}
+
+fn parse_json(input: &str) -> HashMap<String, String> {
+    serde_json::from_str::<HashMap<String, String>>(&transfer_string(input.to_string()))
+        .expect("deserialize json error")
+}
+
+fn transfer_string(input: String) -> String {
+    let mut res = input.clone();
+    let mut temp = Vec::new();
+    for (index, elem) in input.chars().enumerate() {
+        if elem == '\'' {
+            temp.push(index);
+        }
+    }
+
+    for index in temp.into_iter() {
+        res.replace_range(index..index + 1, "\"");
+    }
+    res
+}
+
+#[cfg(test)]
+mod test {
+    use super::transfer_string;
+
+    #[test]
+    fn test_transfer_string() {
+        assert_eq!(
+            transfer_string(String::from("{'a': 'b', 'c': 'd'}")),
+            "{\"a\": \"b\", \"c\": \"d\"}",
+        );
     }
 }

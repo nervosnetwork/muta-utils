@@ -1,13 +1,32 @@
-use std::error::Error;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use async_trait::async_trait;
 use bytes::Bytes;
 use creep::Context;
+use muta_apm_derive::tracing_span;
 
 const N: u64 = 41;
 
+#[async_trait]
+trait MockConsensus {
+    async fn get_block(&self, ctx: Context, height: u64) -> Bytes;
+    async fn commit(&self, ctx: Context, info: Bytes);
+}
+
 struct Consensus {}
+
+#[async_trait]
+impl MockConsensus for Consensus {
+    #[tracing_span]
+    async fn get_block(&self, ctx: Context, _height: u64) -> Bytes {
+        Bytes::new()
+    }
+
+    #[tracing_span]
+    async fn commit(&self, ctx: Context, info: Bytes) {
+        let _ = info.as_ref().to_vec();
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -35,10 +54,9 @@ fn init_ctx() -> Context {
     Context::new()
 }
 
-#[muta_apm::derive::tracing_span(trace_name = "power_mod")]
+#[tracing_span(kind = "main", name = "power_mod")]
 pub async fn power_mod(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
     let mut res = 1u64;
-    std::thread::sleep(std::time::Duration::from_millis(100));
     a %= m;
     while b != 0 {
         if (b & 1) == 1 {
@@ -46,16 +64,14 @@ pub async fn power_mod(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
             b -= 1;
         }
         b >>= 1;
-        a = multi(ctx.clone(), a, a, m);
+        a = multi(ctx.clone(), a, a, m)
     }
     res
 }
 
-#[muta_apm::derive::tracing_span]
+#[tracing_span(kind = "main")]
 async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
-    std::thread::sleep(std::time::Duration::from_millis(200));
     for a in aa.into_iter() {
-        std::thread::sleep(std::time::Duration::from_millis(100));
         let mut x = power_mod(ctx.clone(), a, m, N).await;
         let mut y: u64 = 0;
         for _i in 0..k {
@@ -72,9 +88,12 @@ async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
     true
 }
 
-#[muta_apm::derive::tracing_span(trace_tag_key = "a", trace_tag_value = "b + 3")]
+#[tracing_span(
+    kind = "main",
+    tags = "{'a': 'b', 'c': 'd'}",
+    logs = "{'c': 'm + 3'}"
+)]
 fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
-    std::thread::sleep(std::time::Duration::from_millis(300));
     let mut res = 0u64;
     a %= m;
     while b != 0 {
