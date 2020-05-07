@@ -5,9 +5,9 @@ use quote::quote;
 use syn::{parse_str, Expr, Lit, Meta, NestedMeta};
 
 static KIND: &str = "kind";
-static TRACING_NAME: &str = "trace_name";
-static TRACING_TAGS: &str = "trace_tags";
-static TRACING_LOGS: &str = "trace_logs";
+static TRACING_NAME: &str = "name";
+static TRACING_TAGS: &str = "tags";
+static TRACING_LOGS: &str = "logs";
 
 pub struct TracingAttrs {
     pub kind:         String,
@@ -97,8 +97,6 @@ fn match_attr(tracing_attrs: &mut TracingAttrs, input: &NestedMeta) {
                     tracing_attrs.set_tracing_name(get_lit_str(&name_value.lit));
                 } else if ident == TRACING_TAGS {
                     tracing_attrs.set_tracing_tags(parse_json(&get_lit_str(&name_value.lit)));
-                // tracing_attrs.set_tracing_tags(parse_json(&get_lit_str(&
-                // name_value.lit)));
                 } else if ident == TRACING_LOGS {
                     tracing_attrs.set_tracing_logs(parse_json(&get_lit_str(&name_value.lit)));
                 } else {

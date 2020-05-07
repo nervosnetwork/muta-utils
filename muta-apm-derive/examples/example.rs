@@ -54,7 +54,7 @@ fn init_ctx() -> Context {
     Context::new()
 }
 
-#[tracing_span(kind = "main", trace_name = "power_mod")]
+#[tracing_span(kind = "main", name = "power_mod")]
 pub async fn power_mod(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
     let mut res = 1u64;
     a %= m;
@@ -90,8 +90,8 @@ async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
 
 #[tracing_span(
     kind = "main",
-    trace_tags = "{'a': 'b', 'c': 'd'}",
-    trace_logs = "{'c': 'm + 3'}"
+    tags = "{'a': 'b', 'c': 'd'}",
+    logs = "{'c': 'm + 3'}"
 )]
 fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
     let mut res = 0u64;
