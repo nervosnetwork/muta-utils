@@ -34,7 +34,7 @@ impl TracingAttrs {
 
     pub fn get_tag_map(&self) -> HashMap<String, String> {
         let mut res = self.tracing_tags.clone();
-        res.insert("kind = ".to_string(), self.kind.clone());
+        res.insert("kind".to_string(), self.kind.clone());
         res
     }
 
