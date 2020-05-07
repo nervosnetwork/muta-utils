@@ -33,7 +33,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         quote! { "null" }
     };
 
-    let _tag_value = if let Some(trace_tag_value) = tracing_attrs.tracing_tag_value.clone() {
+    let _tag_value = if let Some(trace_tag_value) = tracing_attrs.tracing_tag_value {
         if let Ok(expr) = parse_str::<Expr>(&trace_tag_value) {
             quote! { (#expr).to_string() }
         } else {
@@ -45,7 +45,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let res = quote! {
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
-            use rustracing_jaeger::span::SpanContext;
+            use muta_apm::rustracing_jaeger::span::SpanContext;
 
             let span = if let Some(parent_ctx) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
                 if parent_ctx.is_some() {
@@ -57,7 +57,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                 muta_apm::MUTA_TRACER.span(#trace_name)
             };
 
-            let ctx = match span {
+            let ctx = match &span {
                 Some(span) => ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone())),
                 None => ctx,
             };
