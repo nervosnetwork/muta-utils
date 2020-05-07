@@ -14,7 +14,6 @@ trait MockConsensus {
 
 struct Consensus {}
 
-
 #[async_trait]
 impl MockConsensus for Consensus {
     #[tracing_span]

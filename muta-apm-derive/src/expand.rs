@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, parse_str, AttributeArgs, Expr, ItemFn};
+use syn::{parse_macro_input, AttributeArgs, ItemFn};
 
-use crate::attr_parse::parse_attrs;
+use crate::attr_parse::{parse_attrs, span_tag};
 
 pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func = parse_macro_input!(func as ItemFn);
@@ -26,22 +26,11 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         func_name.to_string()
     };
 
-    let _has_tag = tracing_attrs.tracing_tag_key.is_some();
-    let _tag_key = if let Some(trace_tag_key) = tracing_attrs.tracing_tag_key.clone() {
-        quote! { #trace_tag_key }
-    } else {
-        quote! { "null" }
-    };
-
-    let _tag_value = if let Some(trace_tag_value) = tracing_attrs.tracing_tag_value {
-        if let Ok(expr) = parse_str::<Expr>(&trace_tag_value) {
-            quote! { (#expr).to_string() }
-        } else {
-            quote! { #trace_tag_value }
-        }
-    } else {
-        quote! { "null" }
-    };
+    let tag_map = tracing_attrs.get_tag_map();
+    let span_tag_stmts = tag_map
+        .into_iter()
+        .map(|(key, val)| span_tag(&key, &val))
+        .collect::<Vec<_>>();
 
     let res = quote! {
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
@@ -61,9 +50,6 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                 Some(span) => ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone())),
                 None => ctx,
             };
-            // if #has_tag {
-            //     span = span.tag(Tag::new(#tag_key, #tag_value));
-            // }
 
             #func_block
         }
