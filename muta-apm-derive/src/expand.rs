@@ -62,7 +62,14 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
             };
 
             let ctx = match span.as_mut() {
-                Some(span) => ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone())),
+                Some(span) => {
+                    span.log(|log| {
+                        for span_log in span_logs.into_iter() {
+                            log.field(span_log);
+                        }
+                    });
+                    ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone()))
+                },
                 None => ctx,
             };
 
