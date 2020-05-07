@@ -1,6 +1,7 @@
 //!
 
 pub use muta_apm_derive as derive;
+pub use rustracing;
 pub use rustracing_jaeger;
 
 use std::borrow::Cow;
@@ -8,9 +9,10 @@ use std::net::SocketAddr;
 
 use parking_lot::RwLock;
 use rustracing::sampler::AllSampler;
+use rustracing::tag::Tag;
 use rustracing_jaeger::reporter::JaegerCompactReporter;
-use rustracing_jaeger::Tracer;
 use rustracing_jaeger::span::{Span, SpanContext};
+use rustracing_jaeger::Tracer;
 
 const SPAN_CHANNEL_SIZE: usize = 1024 * 1024;
 
@@ -50,16 +52,29 @@ impl MutaTracer {
         &self,
         opt_name: N,
         parent_ctx: SpanContext,
+        tags: Vec<Tag>,
     ) -> Option<Span> {
         match self.inner.read().as_ref() {
-            Some(inner) => Some(inner.span(opt_name).child_of(&parent_ctx).start()),
+            Some(inner) => {
+                let mut span = inner.span(opt_name);
+                for tag in tags.into_iter() {
+                    span = span.tag(tag);
+                }
+                Some(span.child_of(&parent_ctx).start())
+            }
             None => None,
         }
     }
 
-    pub fn span<N: Into<Cow<'static, str>>>(&self, opt_name: N) -> Option<Span> {
+    pub fn span<N: Into<Cow<'static, str>>>(&self, opt_name: N, tags: Vec<Tag>) -> Option<Span> {
         match self.inner.read().as_ref() {
-            Some(inner) => Some(inner.span(opt_name).start()),
+            Some(inner) => {
+                let mut span = inner.span(opt_name);
+                for tag in tags.into_iter() {
+                    span = span.tag(tag);
+                }
+                Some(span.start())
+            }
             None => None,
         }
     }

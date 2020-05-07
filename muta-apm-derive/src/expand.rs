@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, AttributeArgs, ItemFn};
 
-use crate::attr_parse::{parse_attrs, span_tag};
+use crate::attr_parse::{parse_attrs, span_log, span_tag};
 
 pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func = parse_macro_input!(func as ItemFn);
@@ -20,33 +20,48 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     };
 
     let tracing_attrs = parse_attrs(parse_macro_input!(attr as AttributeArgs));
+    let kind = tracing_attrs.kind.clone();
     let trace_name = if let Some(name) = tracing_attrs.get_tracing_name() {
-        name
+        kind + "." + &name
     } else {
-        func_name.to_string()
+        kind + "." + &func_name.to_string()
     };
 
-    let tag_map = tracing_attrs.get_tag_map();
-    let span_tag_stmts = tag_map
+    let span_tag_stmts = tracing_attrs
+        .get_tag_map()
         .into_iter()
-        .map(|(key, val)| span_tag(&key, &val))
+        .map(|(key, val)| span_tag(key, val))
+        .collect::<Vec<_>>();
+
+    let span_log_stmts = tracing_attrs
+        .get_log_map()
+        .into_iter()
+        .map(|(key, val)| span_log(key, val))
         .collect::<Vec<_>>();
 
     let res = quote! {
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
             use muta_apm::rustracing_jaeger::span::SpanContext;
+            use muta_apm::rustracing::tag::Tag;
+            use muta_apm::rustracing::log::LogField;
 
-            let span = if let Some(parent_ctx) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
+            let mut span_tags: Vec<Tag> = Vec::new();
+            #(#span_tag_stmts)*
+
+            let mut span_logs: Vec<LogField> = Vec::new();
+            #(#span_log_stmts)*
+
+            let mut span = if let Some(parent_ctx) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
                 if parent_ctx.is_some() {
-                    muta_apm::MUTA_TRACER.child_of_span(#trace_name, parent_ctx.clone().unwrap())
+                    muta_apm::MUTA_TRACER.child_of_span(#trace_name, parent_ctx.clone().unwrap(), span_tags)
                 } else {
-                    muta_apm::MUTA_TRACER.span(#trace_name)
+                    muta_apm::MUTA_TRACER.span(#trace_name, span_tags)
                 }
             } else {
-                muta_apm::MUTA_TRACER.span(#trace_name)
+                muta_apm::MUTA_TRACER.span(#trace_name, span_tags)
             };
 
-            let ctx = match &span {
+            let ctx = match span.as_mut() {
                 Some(span) => ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone())),
                 None => ctx,
             };
