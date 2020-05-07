@@ -1,13 +1,16 @@
 //!
 
+pub use muta_apm_derive as derive;
+pub use rustracing_jaeger;
+
 use std::borrow::Cow;
 use std::net::SocketAddr;
 
 use parking_lot::RwLock;
 use rustracing::sampler::AllSampler;
 use rustracing_jaeger::reporter::JaegerCompactReporter;
-pub use rustracing_jaeger::span::{Span, SpanContext, StartSpanOptions};
 use rustracing_jaeger::Tracer;
+use rustracing_jaeger::span::{Span, SpanContext};
 
 const SPAN_CHANNEL_SIZE: usize = 1024 * 1024;
 
