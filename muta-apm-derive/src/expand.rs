@@ -40,6 +40,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         .collect::<Vec<_>>();
 
     let res = quote! {
+        #[allow(unused_variables)]
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
             use muta_apm::rustracing_jaeger::span::SpanContext;
             use muta_apm::rustracing::tag::Tag;
