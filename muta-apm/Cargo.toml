@@ -14,7 +14,7 @@ lazy_static = "1.4"
 parking_lot = "0.10"
 rustracing = "0.4"
 rustracing_jaeger = "0.4"
-muta-apm-derive = { path = "../muta-apm-derive" }
+muta-apm-derive = "0.1.0-alpha.2"
 
 [dev-dependencies]
 async-trait = "0.1"
