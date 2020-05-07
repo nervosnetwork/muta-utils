@@ -37,6 +37,7 @@ pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr) {
     });
 }
 
+#[derive(Default)]
 pub struct MutaTracer {
     pub(crate) inner: RwLock<Option<Tracer>>,
 }

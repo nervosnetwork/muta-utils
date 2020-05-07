@@ -64,7 +64,7 @@ pub async fn power_mod(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
             b -= 1;
         }
         b >>= 1;
-        a = multi(ctx.clone(), a, a, m);
+        a = multi(ctx.clone(), a, a, m)
     }
     res
 }
@@ -90,10 +90,8 @@ async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
 
 #[tracing_span(
     kind = "main",
-    trace_tag_keys = "[a, c]",
-    trace_tag_values = "[b, d]",
-    trace_log_keys = "[e]",
-    trace_log_values = "[m + 3]"
+    trace_tags = "{'a': 'b', 'c': 'd'}",
+    trace_logs = "{'c': 'm + 3'}"
 )]
 fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
     let mut res = 0u64;

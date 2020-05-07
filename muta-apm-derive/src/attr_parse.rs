@@ -1,34 +1,28 @@
 use std::collections::HashMap;
 
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::quote;
 use syn::{parse_str, Expr, Lit, Meta, NestedMeta};
 
 static KIND: &str = "kind";
 static TRACING_NAME: &str = "trace_name";
-static TRACING_TAG_KEYS: &str = "trace_tag_keys";
-static TRACING_TAG_VALUES: &str = "trace_tag_values";
-static TRACING_LOG_KEYS: &str = "trace_log_keys";
-static TRACING_LOG_VALUES: &str = "trace_log_values";
+static TRACING_TAGS: &str = "trace_tags";
+static TRACING_LOGS: &str = "trace_logs";
 
 pub struct TracingAttrs {
-    pub kind:               String,
-    pub tracing_name:       Option<String>,
-    pub tracing_tag_keys:   Vec<String>,
-    pub tracing_tag_values: Vec<String>,
-    pub tracing_log_keys:   Option<Vec<String>>,
-    pub tracing_log_values: Option<Vec<String>>,
+    pub kind:         String,
+    pub tracing_name: Option<String>,
+    pub tracing_tags: HashMap<String, String>,
+    pub tracing_logs: HashMap<String, String>,
 }
 
 impl Default for TracingAttrs {
     fn default() -> Self {
         TracingAttrs {
-            kind:               String::new(),
-            tracing_name:       None,
-            tracing_tag_keys:   Vec::new(),
-            tracing_tag_values: Vec::new(),
-            tracing_log_keys:   None,
-            tracing_log_values: None,
+            kind:         String::new(),
+            tracing_name: None,
+            tracing_tags: HashMap::new(),
+            tracing_logs: HashMap::new(),
         }
     }
 }
@@ -39,33 +33,13 @@ impl TracingAttrs {
     }
 
     pub fn get_tag_map(&self) -> HashMap<String, String> {
-        let mut keys = self.tracing_tag_keys.clone();
-        let mut values = self.tracing_tag_values.clone();
-
-        keys.push("kind = ".to_string());
-        values.push(self.kind.clone());
-
-        assert!(keys.len() == values.len());
-
-        keys.iter()
-            .zip(values.iter())
-            .map(|(k, v)| (k.to_owned(), v.to_owned()))
-            .collect::<HashMap<_, _>>()
+        let mut res = self.tracing_tags.clone();
+        res.insert("kind = ".to_string(), self.kind.clone());
+        res
     }
 
     pub fn get_log_map(&self) -> HashMap<String, String> {
-        if self.tracing_log_keys.is_none() && self.tracing_log_values.is_none() {
-            return HashMap::new();
-        }
-
-        let keys = self.tracing_log_keys.clone().unwrap();
-        let values = self.tracing_log_values.clone().unwrap();
-        assert!(keys.len() == values.len());
-
-        keys.iter()
-            .zip(values.iter())
-            .map(|(k, v)| (k.to_owned(), v.to_owned()))
-            .collect::<HashMap<_, _>>()
+        self.tracing_logs.clone()
     }
 
     fn set_kind(&mut self, kind: String) {
@@ -76,20 +50,12 @@ impl TracingAttrs {
         self.tracing_name = Some(name);
     }
 
-    fn set_tracing_tag_keys(&mut self, tag_keys: Vec<String>) {
-        self.tracing_tag_keys = tag_keys;
+    fn set_tracing_tags(&mut self, tags: HashMap<String, String>) {
+        self.tracing_tags = tags;
     }
 
-    fn set_tracing_tag_values(&mut self, tag_values: Vec<String>) {
-        self.tracing_tag_values = tag_values;
-    }
-
-    fn set_tracing_log_keys(&mut self, log_keys: Vec<String>) {
-        self.tracing_log_keys = Some(log_keys);
-    }
-
-    fn set_tracing_log_values(&mut self, log_values: Vec<String>) {
-        self.tracing_log_values = Some(log_values);
+    fn set_tracing_logs(&mut self, logs: HashMap<String, String>) {
+        self.tracing_logs = logs;
     }
 }
 
@@ -129,14 +95,12 @@ fn match_attr(tracing_attrs: &mut TracingAttrs, input: &NestedMeta) {
                     tracing_attrs.set_kind(get_lit_str(&name_value.lit));
                 } else if ident == TRACING_NAME {
                     tracing_attrs.set_tracing_name(get_lit_str(&name_value.lit));
-                } else if ident == TRACING_TAG_KEYS {
-                    tracing_attrs.set_tracing_tag_keys(parse_list(&get_lit_str(&name_value.lit)));
-                } else if ident == TRACING_TAG_VALUES {
-                    tracing_attrs.set_tracing_tag_values(parse_list(&get_lit_str(&name_value.lit)));
-                } else if ident == TRACING_LOG_KEYS {
-                    tracing_attrs.set_tracing_log_keys(parse_list(&get_lit_str(&name_value.lit)));
-                } else if ident == TRACING_LOG_VALUES {
-                    tracing_attrs.set_tracing_log_values(parse_list(&get_lit_str(&name_value.lit)));
+                } else if ident == TRACING_TAGS {
+                    tracing_attrs.set_tracing_tags(parse_json(&get_lit_str(&name_value.lit)));
+                // tracing_attrs.set_tracing_tags(parse_json(&get_lit_str(&
+                // name_value.lit)));
+                } else if ident == TRACING_LOGS {
+                    tracing_attrs.set_tracing_logs(parse_json(&get_lit_str(&name_value.lit)));
                 } else {
                     panic!("");
                 }
@@ -154,13 +118,35 @@ fn get_lit_str(lit: &Lit) -> String {
     }
 }
 
-fn parse_list(input: &str) -> Vec<String> {
-    match parse_str::<Expr>(&input).expect("parse list error") {
-        Expr::Array(expr_elems) => expr_elems
-            .elems
-            .iter()
-            .map(|elem| elem.to_token_stream().to_string())
-            .collect::<Vec<_>>(),
-        _ => unreachable!("array"),
+fn parse_json(input: &str) -> HashMap<String, String> {
+    serde_json::from_str::<HashMap<String, String>>(&transfer_string(input.to_string()))
+        .expect("deserialize json error")
+}
+
+fn transfer_string(input: String) -> String {
+    let mut res = input.clone();
+    let mut temp = Vec::new();
+    for (index, elem) in input.chars().enumerate() {
+        if elem == '\'' {
+            temp.push(index);
+        }
+    }
+
+    for index in temp.into_iter() {
+        res.replace_range(index..index + 1, "\"");
+    }
+    res
+}
+
+#[cfg(test)]
+mod test {
+    use super::transfer_string;
+
+    #[test]
+    fn test_transfer_string() {
+        assert_eq!(
+            transfer_string(String::from("{'a': 'b', 'c': 'd'}")),
+            "{\"a\": \"b\", \"c\": \"d\"}",
+        );
     }
 }
