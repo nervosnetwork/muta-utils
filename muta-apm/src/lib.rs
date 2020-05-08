@@ -30,9 +30,17 @@ pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr) {
         .set_agent_addr(udp_addr)
         .expect("set upd addr error");
 
+    let mut batch_spans = Vec::with_capacity(101);
     std::thread::spawn(move || loop {
         if let Ok(finished_span) = span_rx.try_recv() {
-            reporter.report(&[finished_span]).unwrap();
+            batch_spans.push(finished_span);
+
+            if batch_spans.len() >= 100 {
+                let enough_spans = batch_spans.drain(..).collect::<Vec<_>>();
+                if let Err(err) = reporter.report(&enough_spans) {
+                    log::warn!("jaeger report {}", err);
+                }
+            }
         }
     });
 }
