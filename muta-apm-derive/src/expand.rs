@@ -4,6 +4,64 @@ use syn::{parse_macro_input, AttributeArgs, ItemFn};
 
 use crate::attr_parse::{parse_attrs, span_log, span_tag};
 
+pub fn ret_pin_box_fut(ret_ty: &syn::ReturnType) -> bool {
+    let expect_ty = match ret_ty {
+        syn::ReturnType::Type(_, ty) => ty,
+        _ => return false,
+    };
+
+    let expect_pin = match *(expect_ty.clone()) {
+        syn::Type::Path(syn::TypePath { qself: _, path }) => {
+            let last_seg = path.segments.last().cloned();
+            match last_seg.map(|ls| (ls.ident.clone(), ls)) {
+                Some((ls_ident, ls)) if ls_ident.to_string() == "Pin" => ls,
+                _ => return false,
+            }
+        }
+        _ => return false,
+    };
+
+    let expect_box = match &expect_pin.arguments {
+        syn::PathArguments::AngleBracketed(wrapper) => match wrapper.args.last() {
+            Some(syn::GenericArgument::Type(syn::Type::Path(syn::TypePath { qself: _, path }))) => {
+                match path.segments.last().map(|ls| (ls.ident.clone(), ls)) {
+                    Some((ls_ident, ls)) if ls_ident.to_string() == "Box" => ls,
+                    _ => return false,
+                }
+            }
+            _ => return false,
+        },
+        _ => return false,
+    };
+
+    // Has Future trait bound
+    match &expect_box.arguments {
+        syn::PathArguments::AngleBracketed(wrapper) => match wrapper.args.last() {
+            Some(syn::GenericArgument::Type(syn::Type::TraitObject(syn::TypeTraitObject {
+                dyn_token: _,
+                bounds,
+            }))) => {
+                let mut has_fut = false;
+
+                for bound in bounds.iter() {
+                    if let syn::TypeParamBound::Trait(syn::TraitBound { path, .. }) = bound {
+                        if let Some(ls_ident) = path.segments.last().map(|ls| ls.ident.clone()) {
+                            if ls_ident.to_string() == "Future" {
+                                has_fut = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                has_fut
+            }
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
 pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func = parse_macro_input!(func as ItemFn);
     let func_vis = &func.vis;
@@ -38,6 +96,21 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         .into_iter()
         .map(|(key, val)| span_log(key, val))
         .collect::<Vec<_>>();
+
+    // Workaround for async-trait, which return Pin<Box<dyn Future>>, and cause
+    // tracing span object be dropped too early.
+    let func_block = if ret_pin_box_fut(func_output) {
+        quote! {
+            Box::pin(async move {
+                let _ = span;
+                #func_block.await
+            })
+        }
+    } else {
+        quote! {
+            #func_block
+        }
+    };
 
     let res = quote! {
         #[allow(unused_variables)]
