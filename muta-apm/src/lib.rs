@@ -15,7 +15,7 @@ use rustracing_jaeger::span::{Span, SpanContext};
 use rustracing_jaeger::Tracer;
 
 const SPAN_CHANNEL_SIZE: usize = 1024 * 1024;
-const DEFAULT_SPAN_BATCH_SIZE: usize = 100;
+const DEFAULT_SPAN_BATCH_SIZE: usize = 20;
 
 lazy_static::lazy_static! {
     pub static ref MUTA_TRACER: MutaTracer = MutaTracer::new();

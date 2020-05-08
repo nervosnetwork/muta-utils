@@ -142,7 +142,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                             log.field(span_log);
                         }
                     });
-                    ctx.with_value("parent_span_ctx", span.context().map(|cx| cx.clone()))
+                    ctx.with_value("parent_span_ctx", span.context().map(span.context().cloned()))
                 },
                 None => ctx,
             };

@@ -1,6 +1,6 @@
 [package]
 name = "muta-apm"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 authors = ["Muta Dev <muta@nervos.org>"]
 edition = "2018"
 license = "MIT"
@@ -14,7 +14,7 @@ lazy_static = "1.4"
 parking_lot = "0.10"
 rustracing = "0.4"
 rustracing_jaeger = "0.4"
-muta-apm-derive = "0.1.0-alpha.5"
+muta-apm-derive = "0.1.0-alpha.6"
 log = "0.4"
 
 [dev-dependencies]
