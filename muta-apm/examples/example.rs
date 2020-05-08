@@ -50,6 +50,7 @@ fn init_ctx() -> Context {
     muta_apm::global_tracer_register(
         "rabin_miller",
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6831),
+        Some(50)
     );
     Context::new()
 }
