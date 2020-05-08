@@ -15,6 +15,7 @@ parking_lot = "0.10"
 rustracing = "0.4"
 rustracing_jaeger = "0.4"
 muta-apm-derive = "0.1.0-alpha.3"
+log = "0.4"
 
 [dev-dependencies]
 async-trait = "0.1"

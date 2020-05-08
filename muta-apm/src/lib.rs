@@ -15,13 +15,15 @@ use rustracing_jaeger::span::{Span, SpanContext};
 use rustracing_jaeger::Tracer;
 
 const SPAN_CHANNEL_SIZE: usize = 1024 * 1024;
+const DEFAULT_SPAN_BATCH_SIZE: usize = 100;
 
 lazy_static::lazy_static! {
     pub static ref MUTA_TRACER: MutaTracer = MutaTracer::new();
 }
 
-pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr) {
+pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr, batch_size: Option<usize>) {
     let (span_tx, span_rx) = crossbeam_channel::bounded(SPAN_CHANNEL_SIZE);
+    let batch_size = batch_size.unwrap_or_else(|| DEFAULT_SPAN_BATCH_SIZE);
     let mut reporter = JaegerCompactReporter::new(service_name).unwrap();
     let mut tracer = MUTA_TRACER.inner.write();
     *tracer = Some(Tracer::with_sender(AllSampler, span_tx));
@@ -30,9 +32,17 @@ pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr) {
         .set_agent_addr(udp_addr)
         .expect("set upd addr error");
 
+    let mut batch_spans = Vec::with_capacity(batch_size + 1);
     std::thread::spawn(move || loop {
-        if let Ok(finished_span) = span_rx.try_recv() {
-            reporter.report(&[finished_span]).unwrap();
+        if let Ok(finished_span) = span_rx.recv() {
+            batch_spans.push(finished_span);
+
+            if batch_spans.len() >= batch_size {
+                let enough_spans = batch_spans.drain(..).collect::<Vec<_>>();
+                if let Err(err) = reporter.report(&enough_spans) {
+                    log::warn!("jaeger report {}", err);
+                }
+            }
         }
     });
 }
