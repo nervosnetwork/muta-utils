@@ -34,7 +34,7 @@ pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr, batch_si
 
     let mut batch_spans = Vec::with_capacity(batch_size + 1);
     std::thread::spawn(move || loop {
-        if let Ok(finished_span) = span_rx.try_recv() {
+        if let Ok(finished_span) = span_rx.recv() {
             batch_spans.push(finished_span);
 
             if batch_spans.len() >= batch_size {
