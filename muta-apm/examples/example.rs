@@ -41,16 +41,18 @@ async fn main() {
         k += 1;
     }
 
-    let res = rabin_miller(ctx, aa, m, k).await;
+    let res = rabin_miller(ctx.clone(), aa, m, k).await;
 
     println!("{} is prime number {:?}", N, res);
+
+    let _ = report_err(ctx);
 }
 
 fn init_ctx() -> Context {
     muta_apm::global_tracer_register(
         "rabin_miller",
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6831),
-        Some(50)
+        Some(50),
     );
     Context::new()
 }
@@ -89,11 +91,7 @@ async fn rabin_miller(ctx: Context, aa: Vec<u64>, m: u64, k: u64) -> bool {
     true
 }
 
-#[tracing_span(
-    kind = "main",
-    tags = "{'a': 'b', 'c': 'd'}",
-    logs = "{'c': 'm + 3'}"
-)]
+#[tracing_span(kind = "main", tags = "{'a': 'b', 'c': 'd'}", logs = "{'c': 'm + 3'}")]
 fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
     let mut res = 0u64;
     a %= m;
@@ -106,4 +104,10 @@ fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
         a = (a + a) % m;
     }
     res
+}
+
+#[tracing_span]
+fn report_err(ctx: Context) -> Result<(), String> {
+    println!("{:?}", ctx);
+    Err(String::new())
 }

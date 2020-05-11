@@ -30,7 +30,7 @@ pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr, batch_si
 
     reporter
         .set_agent_addr(udp_addr)
-        .expect("set upd addr error");
+        .expect("set udp addr error");
 
     let mut batch_spans = Vec::with_capacity(batch_size + 1);
     std::thread::spawn(move || loop {

@@ -1,64 +1,68 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, ItemFn};
+use syn::{
+    parse_macro_input, AttributeArgs, GenericArgument, ItemFn, PathArguments, ReturnType,
+    TraitBound, Type, TypeParamBound, TypePath, TypeTraitObject,
+};
 
 use crate::attr_parse::{parse_attrs, span_log, span_tag};
 
-pub fn ret_pin_box_fut(ret_ty: &syn::ReturnType) -> bool {
+pub fn is_ret_pin_box_fut_result(ret_ty: &ReturnType) -> (bool, bool) {
     let expect_ty = match ret_ty {
         syn::ReturnType::Type(_, ty) => ty,
-        _ => return false,
+        _ => return (false, false),
     };
 
     let expect_pin = match *(expect_ty.clone()) {
-        syn::Type::Path(syn::TypePath { qself: _, path }) => {
+        Type::Path(TypePath { qself: _, path }) => {
             let last_seg = path.segments.last().cloned();
             match last_seg.map(|ls| (ls.ident.clone(), ls)) {
                 Some((ls_ident, ls)) if ls_ident.to_string() == "Pin" => ls,
-                _ => return false,
+                _ => return (false, false),
             }
         }
-        _ => return false,
+        _ => return (false, false),
     };
 
     let expect_box = match &expect_pin.arguments {
         syn::PathArguments::AngleBracketed(wrapper) => match wrapper.args.last() {
-            Some(syn::GenericArgument::Type(syn::Type::Path(syn::TypePath { qself: _, path }))) => {
+            Some(GenericArgument::Type(syn::Type::Path(TypePath { qself: _, path }))) => {
                 match path.segments.last().map(|ls| (ls.ident.clone(), ls)) {
                     Some((ls_ident, ls)) if ls_ident.to_string() == "Box" => ls,
-                    _ => return false,
+                    _ => return (false, false),
                 }
             }
-            _ => return false,
+            _ => return (false, false),
         },
-        _ => return false,
+        _ => return (false, false),
     };
 
     // Has Future trait bound
     match &expect_box.arguments {
         syn::PathArguments::AngleBracketed(wrapper) => match wrapper.args.last() {
-            Some(syn::GenericArgument::Type(syn::Type::TraitObject(syn::TypeTraitObject {
+            Some(GenericArgument::Type(syn::Type::TraitObject(TypeTraitObject {
                 dyn_token: _,
                 bounds,
             }))) => {
                 let mut has_fut = false;
+                let mut ret_result = false;
 
                 for bound in bounds.iter() {
-                    if let syn::TypeParamBound::Trait(syn::TraitBound { path, .. }) = bound {
-                        if let Some(ls_ident) = path.segments.last().map(|ls| ls.ident.clone()) {
-                            if ls_ident.to_string() == "Future" {
+                    if let TypeParamBound::Trait(TraitBound { path, .. }) = bound {
+                        if let Some(arg) = path.segments.last() {
+                            if arg.ident.to_string() == "Future" {
                                 has_fut = true;
+                                ret_result = is_fut_ret_result(&arg.arguments);
                                 break;
                             }
                         }
                     }
                 }
-
-                has_fut
+                (has_fut, ret_result)
             }
-            _ => false,
+            _ => (false, false),
         },
-        _ => false,
+        _ => (false, false),
     }
 }
 
@@ -71,6 +75,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let (func_generics, _ty, where_clause) = &func_decl.generics.split_for_impl();
     let func_inputs = &func_decl.inputs;
     let func_output = &func_decl.output;
+    let is_func_ret_result = is_return_result(func_output);
     let func_async = if func_decl.asyncness.is_some() {
         quote! {async}
     } else {
@@ -99,17 +104,79 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     // Workaround for async-trait, which return Pin<Box<dyn Future>>, and cause
     // tracing span object be dropped too early.
-    let func_block = if ret_pin_box_fut(func_output) {
-        quote! {
-            Box::pin(async move {
-                let _ = span;
-                #func_block.await
-            })
+    let (is_box_pin_fut, is_fut_ret_result) = is_ret_pin_box_fut_result(func_output);
+
+    let func_block = if is_box_pin_fut {
+        if is_fut_ret_result {
+            quote! {
+                Box::pin(async move {
+                    let ret = #func_block.await;
+
+                    match span.as_mut() {
+                        Some(span) => {
+                            match ret.as_ref() {
+                                Err(e) => {
+                                    span.set_tag(|| Tag::new("error", true));
+                                    span.log(|log| {
+                                        log.field(LogField::new(
+                                            "error_msg",
+                                            e.to_string(),
+                                        ));
+                                    });
+                                    ret
+                                }
+                                Ok(_) => {
+                                    span.set_tag(|| Tag::new("error", false));
+                                    ret
+                                }
+                            }
+                        }
+                        None => ret,
+                    }
+                })
+            }
+        } else {
+            quote! {
+                Box::pin(async move {
+                    let _ = span;
+                    #func_block.await
+                })
+            }
         }
     } else {
         quote! {
             #func_block
         }
+    };
+
+    let func_block_report_err = if is_func_ret_result {
+        quote! {
+            let ret = #func_block;
+
+            match span.as_mut() {
+                Some(span) => {
+                    match ret.as_ref() {
+                        Err(e) => {
+                            span.set_tag(|| Tag::new("error", true));
+                            span.log(|log| {
+                                log.field(LogField::new(
+                                    "error_msg",
+                                    e.to_string(),
+                                ));
+                            });
+                            ret
+                        }
+                        Ok(_) => {
+                            span.set_tag(|| Tag::new("error", false));
+                            ret
+                        }
+                    }
+                }
+                None => ret,
+            }
+        }
+    } else {
+        quote! { #func_block }
     };
 
     let res = quote! {
@@ -147,8 +214,48 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                 None => ctx,
             };
 
-            #func_block
+            #func_block_report_err
         }
     };
     res.into()
+}
+
+fn is_return_result(ret_type: &ReturnType) -> bool {
+    match ret_type {
+        ReturnType::Default => false,
+
+        ReturnType::Type(_, ty) => match ty.as_ref() {
+            Type::Path(path) => path
+                .path
+                .segments
+                .last()
+                .expect("at least one path segment")
+                .ident
+                .to_string()
+                .contains("Result"),
+            _ => false,
+        },
+    }
+}
+
+fn is_fut_ret_result(intput: &PathArguments) -> bool {
+    match intput {
+        PathArguments::AngleBracketed(angle_arg) => {
+            match angle_arg.args.first().expect("future output") {
+                GenericArgument::Binding(binding) => match &binding.ty {
+                    Type::Path(path) => path
+                        .path
+                        .segments
+                        .last()
+                        .unwrap()
+                        .ident
+                        .to_string()
+                        .contains("Result"),
+                    _ => false,
+                },
+                _ => false,
+            }
+        }
+        _ => false,
+    }
 }
