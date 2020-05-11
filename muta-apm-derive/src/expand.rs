@@ -122,7 +122,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                 Some(span) => {
                     match ret.as_ref() {
                         Err(e) => {
-                            span.set_tag(|| Tag::new("error", false));
+                            span.set_tag(|| Tag::new("error", true));
                             span.log(|log| {
                                 log.field(LogField::new(
                                     "error_msg",
@@ -132,7 +132,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                             ret
                         }
                         Ok(_) => {
-                            span.set_tag(|| Tag::new("error", true));
+                            span.set_tag(|| Tag::new("error", false));
                             ret
                         }
                     }
