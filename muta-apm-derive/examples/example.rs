@@ -103,3 +103,9 @@ fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
     }
     res
 }
+
+#[tracing_span]
+fn _test_error_report(ctx: Context) -> Result<(), String> {
+    let _ = ctx;
+    Err(String::from("Ohh"))
+}

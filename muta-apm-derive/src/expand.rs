@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, ItemFn};
+use regex::Regex;
+use syn::{parse_macro_input, AttributeArgs, ItemFn, ReturnType, Type};
 
 use crate::attr_parse::{parse_attrs, span_log, span_tag};
 
@@ -71,6 +72,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let (func_generics, _ty, where_clause) = &func_decl.generics.split_for_impl();
     let func_inputs = &func_decl.inputs;
     let func_output = &func_decl.output;
+    let is_func_ret_result = is_return_result(func_output);
     let func_async = if func_decl.asyncness.is_some() {
         quote! {async}
     } else {
@@ -112,6 +114,31 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         }
     };
 
+    let report_err = if is_func_ret_result {
+        quote! {
+            match span.as_mut() {
+                Some(span) => {
+                    let is_error = ret.is_err();
+                    span.set_tag(|| Tag::new("error", is_error));
+                    if is_error {
+                        span.log(|log| {
+                            log.field(LogField::new(
+                                "error_msg",
+                                ret.clone().unwrap_err().to_string(),
+                            ));
+                        });
+                        ret
+                    } else {
+                        ret
+                    }
+                }
+                None => ret,
+            }
+        }
+    } else {
+        quote! { ret }
+    };
+
     let res = quote! {
         #[allow(unused_variables)]
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
@@ -147,8 +174,45 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                 None => ctx,
             };
 
-            #func_block
+            let ret = #func_block;
+
+            #report_err
         }
     };
     res.into()
+}
+
+fn is_return_result(ret_type: &ReturnType) -> bool {
+    match ret_type {
+        ReturnType::Default => false,
+
+        ReturnType::Type(_, ty) => match ty.as_ref() {
+            Type::Path(path) => {
+                let ident = &path
+                    .path
+                    .segments
+                    .last()
+                    .expect("at least one path segment")
+                    .ident;
+                let re = Regex::new(r"Result$").unwrap();
+                re.is_match(&ident.to_string())
+            }
+            _ => false,
+        },
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use regex::Regex;
+
+    #[test]
+    fn test_regex() {
+        let ret_type_1 = "ConsensusResult";
+        let ret_type_2 = "ProtocolResult";
+
+        let re = Regex::new(r"Result$").unwrap();
+        assert!(re.is_match(ret_type_1));
+        assert!(re.is_match(ret_type_2));
+    }
 }
