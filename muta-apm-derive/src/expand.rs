@@ -1,6 +1,5 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use regex::Regex;
 use syn::{
     parse_macro_input, AttributeArgs, GenericArgument, ItemFn, PathArguments, ReturnType,
     TraitBound, Type, TypeParamBound, TypePath, TypeTraitObject,
@@ -226,16 +225,14 @@ fn is_return_result(ret_type: &ReturnType) -> bool {
         ReturnType::Default => false,
 
         ReturnType::Type(_, ty) => match ty.as_ref() {
-            Type::Path(path) => {
-                let ident = &path
-                    .path
-                    .segments
-                    .last()
-                    .expect("at least one path segment")
-                    .ident;
-                let re = Regex::new(r"Result$").unwrap();
-                re.is_match(&ident.to_string())
-            }
+            Type::Path(path) => path
+                .path
+                .segments
+                .last()
+                .expect("at least one path segment")
+                .ident
+                .to_string()
+                .contains("Result"),
             _ => false,
         },
     }
@@ -260,23 +257,5 @@ fn is_fut_ret_result(intput: &PathArguments) -> bool {
             }
         }
         _ => false,
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use regex::Regex;
-
-    #[test]
-    fn test_regex() {
-        let ret_type_1 = "ConsensusResult";
-        let ret_type_2 = "ProtocolResult";
-
-        let re = Regex::new(r"Result$").unwrap();
-        assert!(re.is_match(ret_type_1));
-        assert!(re.is_match(ret_type_2));
-
-        let re = Regex::new(r"Result").unwrap();
-        assert!(re.is_match("Result<(), &str>"));
     }
 }
