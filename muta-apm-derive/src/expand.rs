@@ -118,18 +118,21 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         quote! {
             match span.as_mut() {
                 Some(span) => {
-                    let is_error = ret.is_err();
-                    span.set_tag(|| Tag::new("error", is_error));
-                    if is_error {
-                        span.log(|log| {
-                            log.field(LogField::new(
-                                "error_msg",
-                                ret.clone().unwrap_err().to_string(),
-                            ));
-                        });
-                        ret
-                    } else {
-                        ret
+                    match ret.as_ref() {
+                        Err(e) => {
+                            span.set_tag(|| Tag::new("error", false));
+                            span.log(|log| {
+                                log.field(LogField::new(
+                                    "error_msg",
+                                    e.to_string(),
+                                ));
+                            });
+                            ret
+                        }
+                        Ok(_) => {
+                            span.set_tag(|| Tag::new("error", true));
+                            ret
+                        }
                     }
                 }
                 None => ret,
@@ -140,7 +143,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     };
 
     let res = quote! {
-        #[allow(unused_variables)]
+        #[allow(unused_variables, clippy::let_and_return)]
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
             use muta_apm::rustracing_jaeger::span::SpanContext;
             use muta_apm::rustracing::tag::Tag;
