@@ -1,5 +1,7 @@
 //!
 
+#![allow(clippy::cmp_owned)]
+
 mod attr_parse;
 mod expand;
 
