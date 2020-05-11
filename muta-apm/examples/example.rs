@@ -41,9 +41,11 @@ async fn main() {
         k += 1;
     }
 
-    let res = rabin_miller(ctx, aa, m, k).await;
+    let res = rabin_miller(ctx.clone(), aa, m, k).await;
 
     println!("{} is prime number {:?}", N, res);
+
+    let _ = report_err(ctx);
 }
 
 fn init_ctx() -> Context {
@@ -102,4 +104,10 @@ fn multi(ctx: Context, mut a: u64, mut b: u64, m: u64) -> u64 {
         a = (a + a) % m;
     }
     res
+}
+
+#[tracing_span]
+fn report_err(ctx: Context) -> Result<(), String> {
+    println!("{:?}", ctx);
+    Err(String::new())
 }

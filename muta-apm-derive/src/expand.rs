@@ -114,8 +114,10 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         }
     };
 
-    let report_err = if is_func_ret_result {
+    let func_block_report_err = if is_func_ret_result {
         quote! {
+            let ret = #func_block;
+
             match span.as_mut() {
                 Some(span) => {
                     match ret.as_ref() {
@@ -139,11 +141,11 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
             }
         }
     } else {
-        quote! { ret }
+        quote! { #func_block }
     };
 
     let res = quote! {
-        #[allow(unused_variables, clippy::let_and_return)]
+        #[allow(unused_variables)]
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
             use muta_apm::rustracing_jaeger::span::SpanContext;
             use muta_apm::rustracing::tag::Tag;
@@ -177,9 +179,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
                 None => ctx,
             };
 
-            let ret = #func_block;
-
-            #report_err
+            #func_block_report_err
         }
     };
     res.into()
