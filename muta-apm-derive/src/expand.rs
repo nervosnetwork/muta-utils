@@ -111,7 +111,6 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
         if is_fut_ret_result {
             quote! {
                 Box::pin(async move {
-                    let _ = span;
                     let ret = #func_block.await;
 
                     match span.as_mut() {
