@@ -14,7 +14,7 @@ lazy_static = "1.4"
 parking_lot = "0.10"
 rustracing = "0.4"
 rustracing_jaeger = "0.4"
-muta-apm-derive = "0.1.0-alpha.7"
+muta-apm-derive = "0.1.0-alpha.8"
 log = "0.4"
 
 [dev-dependencies]
@@ -27,3 +27,4 @@ overlord = "0.2.0-alpha.11"
 rustracing = "0.4"
 rustracing_jaeger = "0.4"
 tokio = { version = "0.2", features = ["macros", "rt-threaded"] }
+muta-protocol = { git = "https://github.com/nervosnetwork/muta.git", rev = "49474fd" } 

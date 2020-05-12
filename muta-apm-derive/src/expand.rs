@@ -7,10 +7,40 @@ use syn::{
 
 use crate::attr_parse::{parse_attrs, span_log, span_tag};
 
-pub fn is_ret_pin_box_fut_result(ret_ty: &ReturnType) -> (bool, bool) {
+struct PinBoxFutRet {
+    is_pin_box_fut:    bool,
+    is_fut_ret_result: bool,
+    ret_ty:            proc_macro2::TokenStream,
+}
+
+impl Default for PinBoxFutRet {
+    fn default() -> Self {
+        PinBoxFutRet {
+            is_pin_box_fut:    false,
+            is_fut_ret_result: false,
+            ret_ty:            quote! {},
+        }
+    }
+}
+
+impl PinBoxFutRet {
+    fn set_is_pin_box(&mut self, is_pin_box: bool) {
+        self.is_pin_box_fut = is_pin_box;
+    }
+
+    fn set_is_ret_result(&mut self, is_ret_result: bool) {
+        self.is_fut_ret_result = is_ret_result;
+    }
+
+    fn set_ret_type(&mut self, ret_type: proc_macro2::TokenStream) {
+        self.ret_ty = ret_type;
+    }
+}
+
+fn is_ret_pin_box_fut_result(ret_ty: &ReturnType) -> PinBoxFutRet {
     let expect_ty = match ret_ty {
         syn::ReturnType::Type(_, ty) => ty,
-        _ => return (false, false),
+        _ => return PinBoxFutRet::default(),
     };
 
     let expect_pin = match *(expect_ty.clone()) {
@@ -18,10 +48,10 @@ pub fn is_ret_pin_box_fut_result(ret_ty: &ReturnType) -> (bool, bool) {
             let last_seg = path.segments.last().cloned();
             match last_seg.map(|ls| (ls.ident.clone(), ls)) {
                 Some((ls_ident, ls)) if ls_ident.to_string() == "Pin" => ls,
-                _ => return (false, false),
+                _ => return PinBoxFutRet::default(),
             }
         }
-        _ => return (false, false),
+        _ => return PinBoxFutRet::default(),
     };
 
     let expect_box = match &expect_pin.arguments {
@@ -29,12 +59,12 @@ pub fn is_ret_pin_box_fut_result(ret_ty: &ReturnType) -> (bool, bool) {
             Some(GenericArgument::Type(syn::Type::Path(TypePath { qself: _, path }))) => {
                 match path.segments.last().map(|ls| (ls.ident.clone(), ls)) {
                     Some((ls_ident, ls)) if ls_ident.to_string() == "Box" => ls,
-                    _ => return (false, false),
+                    _ => return PinBoxFutRet::default(),
                 }
             }
-            _ => return (false, false),
+            _ => return PinBoxFutRet::default(),
         },
-        _ => return (false, false),
+        _ => return PinBoxFutRet::default(),
     };
 
     // Has Future trait bound
@@ -44,25 +74,25 @@ pub fn is_ret_pin_box_fut_result(ret_ty: &ReturnType) -> (bool, bool) {
                 dyn_token: _,
                 bounds,
             }))) => {
-                let mut has_fut = false;
-                let mut ret_result = false;
+                let mut fut_ret = PinBoxFutRet::default();
 
                 for bound in bounds.iter() {
                     if let TypeParamBound::Trait(TraitBound { path, .. }) = bound {
                         if let Some(arg) = path.segments.last() {
                             if arg.ident.to_string() == "Future" {
-                                has_fut = true;
-                                ret_result = is_fut_ret_result(&arg.arguments);
+                                fut_ret.set_is_pin_box(true);
+                                let is_ret_result = is_fut_ret_result(&arg.arguments, &mut fut_ret);
+                                fut_ret.set_is_ret_result(is_ret_result);
                                 break;
                             }
                         }
                     }
                 }
-                (has_fut, ret_result)
+                fut_ret
             }
-            _ => (false, false),
+            _ => PinBoxFutRet::default(),
         },
-        _ => (false, false),
+        _ => PinBoxFutRet::default(),
     }
 }
 
@@ -104,13 +134,14 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     // Workaround for async-trait, which return Pin<Box<dyn Future>>, and cause
     // tracing span object be dropped too early.
-    let (is_box_pin_fut, is_fut_ret_result) = is_ret_pin_box_fut_result(func_output);
+    let fut_return = is_ret_pin_box_fut_result(func_output);
 
-    let func_block = if is_box_pin_fut {
-        if is_fut_ret_result {
+    let func_block = if fut_return.is_pin_box_fut {
+        if fut_return.is_fut_ret_result {
+            let ret_ty = fut_return.ret_ty;
             quote! {
                 Box::pin(async move {
-                    let ret = #func_block.await;
+                    let ret: #ret_ty = #func_block.await;
 
                     match span.as_mut() {
                         Some(span) => {
@@ -180,7 +211,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     };
 
     let res = quote! {
-        #[allow(unused_variables)]
+        #[allow(unused_variables, clippy::type_complexity)]
         #func_vis #func_async fn #func_name #func_generics(#func_inputs) #func_output #where_clause {
             use muta_apm::rustracing_jaeger::span::SpanContext;
             use muta_apm::rustracing::tag::Tag;
@@ -238,19 +269,21 @@ fn is_return_result(ret_type: &ReturnType) -> bool {
     }
 }
 
-fn is_fut_ret_result(intput: &PathArguments) -> bool {
+fn is_fut_ret_result(intput: &PathArguments, fut_ret: &mut PinBoxFutRet) -> bool {
     match intput {
         PathArguments::AngleBracketed(angle_arg) => {
             match angle_arg.args.first().expect("future output") {
                 GenericArgument::Binding(binding) => match &binding.ty {
-                    Type::Path(path) => path
-                        .path
-                        .segments
-                        .last()
-                        .unwrap()
-                        .ident
-                        .to_string()
-                        .contains("Result"),
+                    Type::Path(path) => {
+                        fut_ret.set_ret_type(quote! { #path });
+                        path.path
+                            .segments
+                            .last()
+                            .unwrap()
+                            .ident
+                            .to_string()
+                            .contains("Result")
+                    }
                     _ => false,
                 },
                 _ => false,
