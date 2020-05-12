@@ -105,11 +105,11 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
     let (func_generics, _ty, where_clause) = &func_decl.generics.split_for_impl();
     let func_inputs = &func_decl.inputs;
     let func_output = &func_decl.output;
+    let func_async = func_decl.asyncness;
     let is_func_ret_result = is_return_result(func_output);
-    let func_async = if func_decl.asyncness.is_some() {
-        quote! {async}
-    } else {
-        quote! {}
+    let func_ret_ty = match func_output {
+        ReturnType::Default => quote! { () },
+        ReturnType::Type(_, ty) => quote! { #ty },
     };
 
     let tracing_attrs = parse_attrs(parse_macro_input!(attr as AttributeArgs));
@@ -182,7 +182,7 @@ pub fn func_expand(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_block_report_err = if is_func_ret_result {
         quote! {
-            let ret = #func_block;
+            let ret: #func_ret_ty = #func_block;
 
             match span.as_mut() {
                 Some(span) => {
