@@ -1,16 +1,31 @@
+use std::error::Error;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use async_trait::async_trait;
 use bytes::Bytes;
 use creep::Context;
 use muta_apm_derive::tracing_span;
+use muta_protocol::{ProtocolError, ProtocolErrorKind};
 
 const N: u64 = 41;
 
+enum ApmError {
+    No,
+}
+
+impl From<ApmError> for ProtocolError {
+    fn from(_err: ApmError) -> ProtocolError {
+        ProtocolError::new(
+            ProtocolErrorKind::Consensus,
+            Box::new(std::io::Error::last_os_error()),
+        )
+    }
+}
+
 #[async_trait]
 trait MockConsensus {
-    async fn get_block(&self, ctx: Context, height: u64) -> Bytes;
-    async fn commit(&self, ctx: Context, info: Bytes);
+    async fn get_block(&self, ctx: Context, height: u64) -> Option<Bytes>;
+    async fn commit(&self, ctx: Context, info: Bytes) -> Result<(), Box<dyn Error + Send>>;
 }
 
 struct Consensus {}
@@ -18,13 +33,15 @@ struct Consensus {}
 #[async_trait]
 impl MockConsensus for Consensus {
     #[tracing_span]
-    async fn get_block(&self, ctx: Context, _height: u64) -> Bytes {
-        Bytes::new()
+    async fn get_block(&self, ctx: Context, _height: u64) -> Option<Bytes> {
+        Some(Bytes::new())
     }
 
     #[tracing_span]
-    async fn commit(&self, ctx: Context, info: Bytes) {
-        let _ = info.as_ref().to_vec();
+    async fn commit(&self, ctx: Context, info: Bytes) -> Result<(), Box<dyn Error + Send>> {
+        use std::io;
+        println!("{:?}", ctx);
+        Err(ProtocolError::from(ApmError::No).into())
     }
 }
 
