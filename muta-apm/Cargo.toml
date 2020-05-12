@@ -1,6 +1,6 @@
 [package]
 name = "muta-apm"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 authors = ["Muta Dev <muta@nervos.org>"]
 edition = "2018"
 license = "MIT"
