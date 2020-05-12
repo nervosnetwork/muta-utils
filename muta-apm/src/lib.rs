@@ -11,7 +11,7 @@ use parking_lot::RwLock;
 use rustracing::sampler::AllSampler;
 use rustracing::tag::Tag;
 use rustracing_jaeger::reporter::JaegerCompactReporter;
-use rustracing_jaeger::span::{Span, SpanContext};
+use rustracing_jaeger::span::{Span, SpanContext, TraceId};
 use rustracing_jaeger::Tracer;
 
 const SPAN_CHANNEL_SIZE: usize = 1024 * 1024;
@@ -88,5 +88,10 @@ impl MutaTracer {
             }
             None => None,
         }
+    }
+
+    pub fn trace_id(ctx: Option<SpanContext>) -> TraceId {
+        ctx.map(|c| c.state().trace_id())
+            .unwrap_or_else(|| TraceId::new())
     }
 }
