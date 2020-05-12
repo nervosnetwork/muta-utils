@@ -16,6 +16,7 @@ rustracing = "0.4"
 rustracing_jaeger = "0.4"
 muta-apm-derive = "0.1.0-alpha.10"
 log = "0.4"
+creep = "0.2"
 
 [dev-dependencies]
 async-trait = "0.1"

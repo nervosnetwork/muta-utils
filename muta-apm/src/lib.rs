@@ -5,13 +5,14 @@ pub use rustracing;
 pub use rustracing_jaeger;
 
 use std::borrow::Cow;
+use std::io::Cursor;
 use std::net::SocketAddr;
 
 use parking_lot::RwLock;
 use rustracing::sampler::AllSampler;
 use rustracing::tag::Tag;
 use rustracing_jaeger::reporter::JaegerCompactReporter;
-use rustracing_jaeger::span::{Span, SpanContext, TraceId};
+use rustracing_jaeger::span::{Span, SpanContext};
 use rustracing_jaeger::Tracer;
 
 const SPAN_CHANNEL_SIZE: usize = 1024 * 1024;
@@ -90,8 +91,24 @@ impl MutaTracer {
         }
     }
 
-    pub fn trace_id(ctx: Option<SpanContext>) -> TraceId {
-        ctx.map(|c| c.state().trace_id())
-            .unwrap_or_else(|| TraceId::new())
+    pub fn serialize_ctx(ctx: creep::Context) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        if let Some(Some(parent_ctx)) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
+            if let Err(e) = parent_ctx.inject_to_binary(&mut buf) {
+                log::error!("serialize ctx: {}", e);
+            }
+        }
+
+        buf
+    }
+
+    pub fn deserialize_ctx(ctx: creep::Context, data: Vec<u8>) -> creep::Context {
+        let mut buf = Cursor::new(data);
+        if let Ok(Some(c)) = SpanContext::extract_from_binary(&mut buf) {
+            ctx.with_value("parent_span_ctx", Some(c))
+        } else {
+            ctx
+        }
     }
 }
