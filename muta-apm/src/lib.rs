@@ -5,6 +5,7 @@ pub use rustracing;
 pub use rustracing_jaeger;
 
 use std::borrow::Cow;
+use std::io::Cursor;
 use std::net::SocketAddr;
 
 use parking_lot::RwLock;
@@ -87,6 +88,27 @@ impl MutaTracer {
                 Some(span.start())
             }
             None => None,
+        }
+    }
+
+    pub fn serialize_ctx(ctx: creep::Context) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        if let Some(Some(parent_ctx)) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
+            if let Err(e) = parent_ctx.inject_to_binary(&mut buf) {
+                log::error!("serialize ctx: {}", e);
+            }
+        }
+
+        buf
+    }
+
+    pub fn deserialize_ctx(ctx: creep::Context, data: Vec<u8>) -> creep::Context {
+        let mut buf = Cursor::new(data);
+        if let Ok(Some(c)) = SpanContext::extract_from_binary(&mut buf) {
+            ctx.with_value("parent_span_ctx", Some(c))
+        } else {
+            ctx
         }
     }
 }
