@@ -90,7 +90,7 @@ impl MutaTracer {
         }
     }
 
-    pub fn trace_id(ctx: creep::Context) -> Option<TraceId> {
+    pub fn trace_id(ctx: &creep::Context) -> Option<TraceId> {
         if let Some(Some(parent_ctx)) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
             Some(parent_ctx.state().trace_id())
         } else {
