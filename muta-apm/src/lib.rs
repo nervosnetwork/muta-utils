@@ -11,7 +11,9 @@ use parking_lot::RwLock;
 use rustracing::sampler::AllSampler;
 use rustracing::tag::Tag;
 use rustracing_jaeger::reporter::JaegerCompactReporter;
-use rustracing_jaeger::span::{Span, SpanContext, SpanContextStateBuilder, TraceId};
+use rustracing_jaeger::span::{
+    Span, SpanContext, SpanContextState, SpanContextStateBuilder, TraceId,
+};
 use rustracing_jaeger::Tracer;
 
 const SPAN_CHANNEL_SIZE: usize = 1024 * 1024;
@@ -90,17 +92,23 @@ impl MutaTracer {
         }
     }
 
-    pub fn trace_id(ctx: &creep::Context) -> Option<TraceId> {
+    pub fn new_state(trace_id: TraceId, span_id: u64) -> SpanContextState {
+        SpanContextStateBuilder::new()
+            .trace_id(trace_id)
+            .span_id(span_id)
+            .finish()
+    }
+
+    pub fn span_state(ctx: &creep::Context) -> Option<SpanContextState> {
         if let Some(Some(parent_ctx)) = ctx.get::<Option<SpanContext>>("parent_span_ctx") {
-            Some(parent_ctx.state().trace_id())
+            Some(parent_ctx.state().to_owned())
         } else {
             None
         }
     }
 
-    pub fn inject_trace_id(ctx: creep::Context, trace_id: TraceId) -> creep::Context {
-        let state = SpanContextStateBuilder::new().trace_id(trace_id).finish();
-        let span = SpanContext::new(state, vec![]);
+    pub fn inject_span_state(ctx: creep::Context, span_state: SpanContextState) -> creep::Context {
+        let span = SpanContext::new(span_state, vec![]);
         ctx.with_value::<Option<SpanContext>>("parent_span_ctx", Some(span))
     }
 }
