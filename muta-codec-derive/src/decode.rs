@@ -26,7 +26,7 @@ pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuote
             quote! { {
                 let bytes: Vec<u8> = #bytes;
                 if bytes.len() != #len {
-                    panic!("Length mismatch, got {}", bytes.len());
+                    return rlp::DecoderError::Custom("Length mismatch");
                 }
 
                 let mut out = [0u8; #len];
@@ -59,15 +59,20 @@ pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuote
 
                 quote! { {
                     let temp: Vec<Vec<u8>> = #list(#index)?;
-                    temp
-                        .iter()
-                        .map(|item| #field_ident::decode_fixed(Bytes::from(item.clone())).expect("decode error"))
-                        .collect::<Vec<_>>()
+                    let mut ret = Vec::new();
+                    for item in temp.into_iter() {
+                        if let Ok(res) = #field_ident::decode_fixed(Bytes::from(item.clone())) {
+                            ret.push(res);
+                        } else {
+                            return Err(rlp::DecoderError::Custom("decode fixed error"));
+                        }
+                    }
+                    ret
                 }, }
             } else {
                 quote! { {
                     let bytes: Vec<u8> = #single(#index)?;
-                    #ident::decode_fixed(Bytes::from(bytes)).expect("decode error")
+                    #ident::decode_fixed(Bytes::from(bytes)).map_err(|_| rlp::DecoderError::Custom("decode fixed error"))?
                 }, }
             }
         }
@@ -128,15 +133,20 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
 
                 quote! { #id: {
                     let temp: Vec<Vec<u8>> = #list(#index)?;
-                    temp
-                        .into_iter()
-                        .map(|bytes| #field_ident::decode_fixed(Bytes::from(bytes)).expect("decode error"))
-                        .collect::<Vec<_>>()
+                    let mut ret = Vec::new();
+                    for item in temp.into_iter() {
+                        if let Ok(res) = #field_ident::decode_fixed(Bytes::from(item.clone())) {
+                            ret.push(res);
+                        } else {
+                            return Err(rlp::DecoderError::Custom("decode fixed error"));
+                        }
+                    }
+                    ret
                 }, }
             } else {
                 quote! { #id: {
                     let bytes: Vec<u8> = #single(#index)?;
-                    #ident::decode_fixed(Bytes::from(bytes)).expect("decode error")
+                    #ident::decode_fixed(Bytes::from(bytes)).map_err(|_| rlp::DecoderError::Custom("decode fixed error"))?
                 }, }
             }
         }
