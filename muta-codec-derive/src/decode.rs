@@ -100,7 +100,7 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
             quote! { #id: {
                 let bytes: Vec<u8> = #bytes;
                 if bytes.len() != #len {
-                    panic!("Length mismatch, got {}", bytes.len());
+                    return rlp::DecoderError::Custom("Length mismatch");
                 }
 
                 let mut out = [0u8; #len];
