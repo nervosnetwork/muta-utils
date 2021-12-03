@@ -31,8 +31,7 @@ pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr, batch_si
     *tracer = Some(Tracer::with_sender(AllSampler, span_tx));
 
     reporter
-        .set_agent_addr(udp_addr)
-        .expect("set udp addr error");
+        .set_agent_addr(udp_addr);
 
     let mut batch_spans = Vec::with_capacity(batch_size + 1);
     std::thread::spawn(move || loop {
@@ -49,7 +48,6 @@ pub fn global_tracer_register(service_name: &str, udp_addr: SocketAddr, batch_si
     });
 }
 
-#[derive(Default)]
 pub struct MutaTracer {
     pub(crate) inner: RwLock<Option<Tracer>>,
 }
